@@ -987,6 +987,7 @@ export function EditModal({ onClose, user, onSuccess }) {
           <input
             name="email"
             value={form.email}
+            onChange={handleChange}
             className="flex-1 border border-gray-300 rounded px-2 py-1 w-full focus:ring-2 focus:ring-blue-600 focus:outline-0 "
             placeholder="Email"
           />
