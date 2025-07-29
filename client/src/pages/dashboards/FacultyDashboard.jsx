@@ -117,7 +117,7 @@ function FacultyDashboard() {
               )}
 
               {selectedTab === "StudentManagment" && (
-                  <div className="bg-white p-2 md:p-6 rounded-lg shadow overflow-x-scroll">
+                  <div className="bg-white p-1 md:p-6 rounded-lg shadow">
                   <h2 className="text-xl font-semibold mb-4">
                     Student Management
                   </h2>

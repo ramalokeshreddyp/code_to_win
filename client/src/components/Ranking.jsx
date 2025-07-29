@@ -264,7 +264,7 @@ const RankingTable = ({ filter }) => {
         {filter && (
           <>
             <div className="flex flex-wrap justify-between gap-2 mb-6">
-              <div className="grid grid-cols-4 items-center gap-4 text-sm ">
+              <div className="grid grid-cols-3 md:grid-cols-4 items-center gap-4 text-sm ">
                 <div>
                   <label
                     className="block text-xs font-semibold text-gray-500 mb-1"

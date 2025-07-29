@@ -79,12 +79,12 @@ function StudentManagementTab({
   setSelectedStudent,
 }) {
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden min-w-full p-5">
+    <div className="bg-white rounded-lg shadow overflow-hidden min-w-full p-2 md:p-5">
       <h2 className="text-xl font-semibold mb-4">Student Management</h2>
       <p className="text-gray-500 mb-4">
         Manage student records, update details, and more.
       </p>
-      <div className="flex gap-4 mb-4 items-end justify-between p-5">
+      <div className="flex gap-4 mb-4 items-end justify-between px-5">
         <div className="flex gap-5">
         <div>
           <label className="block text-sm font-medium mb-1">Year</label>
