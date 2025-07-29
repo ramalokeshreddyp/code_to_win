@@ -875,7 +875,7 @@ export function BulkImportModal() {
 }
 
 // Edit Modal (student info)
-export function EditModal({ onClose, user }) {
+export function EditModal({ onClose, user, onSuccess }) {
   const savedData = {
     name: user.name || "",
     roll: user.student_id || "",
@@ -884,6 +884,11 @@ export function EditModal({ onClose, user }) {
     section: user.section || "",
   };
   const [form, setForm] = useState(savedData);
+  const [status, setStatus] = useState({
+    loading: false,
+    error: null,
+    success: false,
+  });
 
   useEffect(() => {
     setForm(savedData);
@@ -897,9 +902,38 @@ export function EditModal({ onClose, user }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onClose();
+    setStatus({ loading: true, error: null, success: false });
+
+    // Build payload with only changed fields
+    const payload = { userId: user.student_id };
+    if (form.name !== savedData.name) payload.name = form.name;
+    if (form.email !== savedData.email) payload.email = form.email;
+
+    // If nothing changed, just close
+    if (Object.keys(payload).length === 1) {
+      setStatus({ loading: false, error: null, success: true });
+      setTimeout(() => onClose(), 500);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/student/update-profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update student");
+      }
+      setStatus({ loading: false, error: null, success: true });
+      if (onSuccess) onSuccess();
+      setTimeout(() => onClose(), 1000);
+    } catch (error) {
+      setStatus({ loading: false, error: error.message, success: false });
+    }
   };
 
   const handleCancel = () => {
@@ -909,7 +943,10 @@ export function EditModal({ onClose, user }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-lg md:w-full md:max-w-sm w-xs p-6 relative" data-aos="fade-in">
+      <div
+        className="bg-white rounded-lg shadow-lg md:w-full md:max-w-sm w-xs p-6 relative"
+        data-aos="fade-in"
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-gray-600"
@@ -958,16 +995,33 @@ export function EditModal({ onClose, user }) {
               type="button"
               onClick={handleCancel}
               className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 cursor-pointer"
+              disabled={status.loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 cursor-pointer"
+              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 cursor-pointer flex items-center gap-2"
+              disabled={status.loading}
             >
-              Save
+              {status.loading ? (
+                <>
+                  <Spinner />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
             </button>
           </div>
+          {status.error && (
+            <div className="text-red-500 text-sm mt-2">{status.error}</div>
+          )}
+          {status.success && (
+            <div className="text-green-500 text-sm mt-2">
+              Student updated successfully!
+            </div>
+          )}
         </form>
       </div>
     </div>
@@ -1055,7 +1109,10 @@ export function UpdateProfileModal({ onClose, onSuccess, user }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-xl p-6 md:w-full md:max-w-sm w-xs shadow-lg relative" data-aos="fade-in">
+      <div
+        className="bg-white rounded-xl p-6 md:w-full md:max-w-sm w-xs shadow-lg relative"
+        data-aos="fade-in"
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-gray-600"
@@ -1178,7 +1235,10 @@ export function UserResetPasswordModal({ onClose, user }) {
   };
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-lg md:w-full md:max-w-sm w-xs p-6 relative" data-aos="fade-in">
+      <div
+        className="bg-white rounded-lg shadow-lg md:w-full md:max-w-sm w-xs p-6 relative"
+        data-aos="fade-in"
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-gray-600"

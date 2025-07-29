@@ -83,12 +83,16 @@ const StudentDashboard = () => {
   return (
     <>
       {editProfile && (
-        <EditModal user={currentUser} onClose={() => setEditprofile(false)} />
+        <EditModal
+          user={currentUser}
+          onSuccess={() => checkAuth()}
+          onClose={() => setEditprofile(false)}
+        />
       )}
       {updateProfile && (
         <UpdateProfileModal
           user={currentUser}
-          onSuccess={() => {}}
+          onSuccess={() => checkAuth()}
           onClose={() => setUpdateProfile(false)}
         />
       )}
@@ -133,7 +137,10 @@ const StudentDashboard = () => {
         {/* Profile Section */}
         <div className="p-4 flex md:flex-row flex-col gap-4">
           {/* Sidebar */}
-          <div className="bg-white rounded-xl shadow-lg p-6  lg:w-md h-fit -mt-24 z-20" data-aos="fade-out">
+          <div
+            className="bg-white rounded-xl shadow-lg p-6  lg:w-md h-fit -mt-24 z-20"
+            data-aos="fade-out"
+          >
             <div className="flex flex-r items-center mb-4">
               <div className="bg-blue-100 text-blue-800 rounded-lg w-24 h-24 flex  items-center text-4xl justify-center font-bold">
                 {currentUser.name

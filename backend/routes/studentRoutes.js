@@ -119,17 +119,29 @@ router.get("/profile", async (req, res) => {
 });
 
 router.put("/update-profile", async (req, res) => {
-  const { userId, name } = req.body;
-  logger.info(`Updating student profile: userId=${userId}, name=${name}`);
+  const { userId, name, email } = req.body;
+  logger.info(`Updating student profile: userId=${userId}`);
   try {
-    await db.query(
-      `UPDATE student_profiles 
-             SET name = ?
-             WHERE student_id = ?`,
-      [name, userId]
-    );
+    if (!name && !email) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+
+    if (name) {
+      await db.query(
+        `UPDATE student_profiles SET name = ? WHERE student_id = ?`,
+        [name, userId]
+      );
+    }
+
+    if (email) {
+      await db.query(`UPDATE users SET email = ? WHERE user_id = ?`, [
+        email,
+        userId,
+      ]);
+    }
+
     logger.info(`Student profile updated for userId: ${userId}`);
-    res.json({ message: "Profile updated" });
+    res.json({ message: "Profile updated successfully" });
   } catch (err) {
     logger.error(
       `Error updating student profile for userId=${userId}: ${err.message}`
