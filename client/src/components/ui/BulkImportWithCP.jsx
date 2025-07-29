@@ -95,7 +95,6 @@ const bulkImportWithCP = ({ onSuccess }) => {
       });
 
       const data = await response.json();
-      console.log(data);
 
       // Set stats for modal
       setUploadStats({

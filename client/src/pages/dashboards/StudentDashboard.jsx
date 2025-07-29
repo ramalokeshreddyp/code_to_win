@@ -133,7 +133,7 @@ const StudentDashboard = () => {
         {/* Profile Section */}
         <div className="p-4 flex md:flex-row flex-col gap-4">
           {/* Sidebar */}
-          <div className="bg-white rounded-xl shadow-lg p-6  lg:w-md h-fit -mt-24 z-20">
+          <div className="bg-white rounded-xl shadow-lg p-6  lg:w-md h-fit -mt-24 z-20" data-aos="fade-out">
             <div className="flex flex-r items-center mb-4">
               <div className="bg-blue-100 text-blue-800 rounded-lg w-24 h-24 flex  items-center text-4xl justify-center font-bold">
                 {currentUser.name
@@ -151,14 +151,14 @@ const StudentDashboard = () => {
                 <h2 className="text-lg font-bold">{currentUser.name}</h2>
                 <div className="flex gap-10">
                   <div>
-                    <p className="text-sm text-gray-500  mt-2">
+                    <p className="text-sm text-gray-500 font-semibold  mt-2">
                       University Rank
                     </p>
                     <p className="text-xl font-semibold text-gray-800">
                       {currentUser.overall_rank}
                     </p>
                   </div>
-                  <div className="bg-green-200 rounded-full md:w-16 md:h-16  w-14 h-14 flex flex-col items-center p-3 justify-center">
+                  <div className="bg-green-200 rounded-full font-semibold md:w-16 md:h-16  w-14 h-14 flex flex-col items-center p-3 justify-center">
                     <p className="text-sm text-gray-500  ">Score</p>
 
                     <p className="md:text-lg text-base  text-gray-900">
@@ -248,7 +248,7 @@ const StudentDashboard = () => {
           {/* Main Section */}
           <div className="w-full rounded-xl">
             <div className="md:flex justify-between items-center">
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap  gap-1">
                 <span className="px-4 py-2 bg-white rounded-xl shadow-sm">
                   Campus:{" "}
                   <span className="font-semibold">{currentUser.college}</span>
@@ -273,7 +273,7 @@ const StudentDashboard = () => {
               </div>
               <button
                 onClick={handleRefresh}
-                className="px-4 py-2 bg-white rounded-xl shadow-sm flex items-center gap-3 cursor-pointer"
+                className="px-4 py-2 bg-white rounded-xl shadow-sm flex items-center gap-3 cursor-pointer mt-2 mb-2 md:mt-0 md:mb-0"
                 disabled={refreshing}
               >
                 <FiRefreshCw className={refreshing ? "animate-spin" : ""} />
@@ -315,6 +315,7 @@ const StudentDashboard = () => {
                   name="LeetCode"
                   color=" hover:text-yellow-600 hover:shadow-yellow-600"
                   icon="/LeetCode_logo.png"
+                  ani="fade-up"
                   total={
                     currentUser.performance.platformWise.leetcode.easy +
                     currentUser.performance.platformWise.leetcode.medium +
@@ -337,6 +338,7 @@ const StudentDashboard = () => {
                   name="CodeChef"
                   color=" hover:text-orange-900 hover:shadow-orange-900"
                   icon="/codechef_logo.png"
+                  ani="fade-up"
                   total={currentUser.performance.platformWise.codechef.contests}
                   subtitle="Contests Participated"
                   breakdown={{
@@ -354,6 +356,7 @@ const StudentDashboard = () => {
                   name="GeeksforGeeks"
                   color=" hover:text-green-800 hover:shadow-green-800"
                   icon="/GeeksForGeeks_logo.png"
+                  ani="fade-down"
                   total={
                     currentUser.performance.platformWise.gfg.school +
                     currentUser.performance.platformWise.gfg.basic +
@@ -376,8 +379,14 @@ const StudentDashboard = () => {
                   name="HackerRank"
                   color=" hover:text-gray-900 hover:shadow-gray-900"
                   icon="/HackerRank_logo.png"
+                  ani="fade-down"
                   total={currentUser.performance.platformWise.hackerrank.badges}
                   subtitle="Stars Gained"
+                  // breakdown={{
+                  //   Badges: (currentUser.performance.platformWise.hackerrank.badgesList || [])
+                  //     .map(badge => `${badge.name}: ${badge.stars}★`)
+                  //     .join(", ")
+                  // }}
                 />
               )}
             </div>

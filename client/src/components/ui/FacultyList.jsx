@@ -55,6 +55,7 @@ const FacultyList = () => {
   const startEdit = (member) => {
     setEditingId(member.faculty_id);
     setEditForm({
+      id: member.faculty_id,
       name: member.name,
       email: member.email,
       dept_code: member.dept_code
@@ -147,13 +148,13 @@ const FacultyList = () => {
 
   return (
     <div className="bg-white rounded-lg shadow">
-      <div className="p-4 border-b">
+      <div className="p-4 ">
         <h2 className="text-lg font-semibold">Faculty List</h2>
         <p className="text-sm text-gray-500">View and filter faculty members</p>
       </div>
 
       {/* Filters */}
-      <div className="p-4 border-b bg-gray-50">
+      <div className="p-4">
         <form
           onSubmit={applyFilters}
           className="flex flex-wrap items-center gap-4"
@@ -176,7 +177,7 @@ const FacultyList = () => {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end mt-5">
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
@@ -192,16 +193,19 @@ const FacultyList = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left  font-medium text-gray-500 uppercase tracking-wider">
+                ID
+              </th>
+              <th className="px-6 py-3 text-left  font-medium text-gray-500 uppercase tracking-wider">
                 Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left  font-medium text-gray-500 uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left  font-medium text-gray-500 uppercase tracking-wider">
                 Department
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left  font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -216,6 +220,19 @@ const FacultyList = () => {
             ) : (
               faculty.map((member) => (
                 <tr key={member.faculty_id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingId === member.faculty_id ? (
+                      <input
+                        type="text"
+                        name="name"
+                        value={editForm.id}
+                        onChange={handleEditChange}
+                        className="border border-gray-300 rounded px-2 py-1 w-full"
+                      />
+                    ) : (
+                      <div className="font-medium text-gray-900">{member.faculty_id}</div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingId === member.faculty_id ? (
                       <input
@@ -294,7 +311,7 @@ const FacultyList = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex space-x-2 justify-end">
+                          <div className="flex space-x-5">
                         <button
                           onClick={() => startEdit(member)}
                           className="text-blue-600 hover:text-blue-900"

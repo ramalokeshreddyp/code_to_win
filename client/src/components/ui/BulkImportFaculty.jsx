@@ -77,7 +77,6 @@ const BulkImportFaculty = ({ onSuccess }) => {
       });
 
       const data = await response.json();
-      console.log(data);
       if (!response.ok) {
         throw new Error(data.errors[0].error || "Failed to import faculty");
       }

@@ -9,7 +9,6 @@ import PDFDocument from "../utils/PDFDocument";
 const ViewProfile = ({ student, onClose }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  console.log(student);
 
   const handleDownloadPDF = async () => {
     setIsGeneratingPDF(true);
@@ -34,7 +33,7 @@ const ViewProfile = ({ student, onClose }) => {
       className="fixed inset-0 z-70 flex items-start justify-center h-screen overflow-scroll bg-[#00000055]  "
     >
       <div
-        className="bg-[#f7f7f7] rounded-xl space-y-4 p-6 w-full flex flex-col items-center max-w-3xl shadow-lg relative"
+        className="bg-[#f7f7f7] rounded-xl space-y-4 p-6 w-full flex flex-col items-center max-w-3xl shadow-lg relative" data-aos="fade"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Profile Content */}
@@ -61,9 +60,9 @@ const ViewProfile = ({ student, onClose }) => {
                 { label: "Year", value: student?.year },
                 { label: "Department", value: student?.dept_name },
                 { label: "Degree", value: student?.degree },
-              ].map((label, value, index) => (
+              ].map((label, index) => (
                 <div key={index} className="text-[#ffffffd6] flex md:flex-col flex-row gap-x-1">
-                  {label.label}:<span>{label.value}</span>
+                  {label.label}:{label.value}
                 </div>
               ))}
             </div>

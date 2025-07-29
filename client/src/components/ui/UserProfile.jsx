@@ -21,12 +21,6 @@ function UserProfile({ user }) {
           </div>
         </div>
       </div>
-      <div className="bg-blue-500 p-4 rounded-lg shadow">
-        <h2 className="text-gray-200 text-sm">Total Students</h2>
-        <p className="text-2xl font-bold text-center text-white">
-          {user?.total_students}
-        </p>
-      </div>
     </div>
   )
 }

@@ -19,7 +19,7 @@ const Register = () => {
     stdId: "",
     name: "",
     email: "",
-    gender: "Male",
+    gender: "",
     degree: "",
     dept: "",
     year: "",
@@ -182,8 +182,9 @@ const Register = () => {
                           type="text"
                           name="stdId"
                           value={formData.stdId}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200  rounded px-3 py-2"
+                              onChange={handleChange}
+                              placeholder="22A91AXXXX"
+                              className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                       <div className="mb-4 w-full">
@@ -193,7 +194,7 @@ const Register = () => {
                           name="name"
                           value={formData.name}
                           onChange={handleChange}
-                          className="w-full border border-gray-200  rounded px-3 py-2"
+                              className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                       <div className="mb-4 w-full">
@@ -205,7 +206,7 @@ const Register = () => {
                           name="email"
                           value={formData.email}
                           onChange={handleChange}
-                          className="w-full border border-gray-200  rounded px-3 py-2"
+                              className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                       <div className="mb-4 w-full">
@@ -254,17 +255,17 @@ const Register = () => {
                         >
                           <option value="">Select</option>
                           <option value="MCA">MCA</option>
-                          <option value="B.Tech.">B.Tech.</option>
+                              <option value="B.Tech.">B.Tech</option>
                         </select>
                       </div>
                       <div className="mb-4 w-full">
                         <label className="block text-gray-500  mb-1">
-                          dept
+                              Department
                         </label>
                         <select
                           name="dept"
                           onChange={handleChange}
-                          className="border border-gray-300  hover:bg-blue-50 p-2 rounded-lg transition outline-none"
+                              className="w-full border border-gray-300  hover:bg-blue-50 p-2 rounded-lg transition outline-none"
                           value={formData.dept}
                         >
                           <option value="">Select</option>
@@ -282,7 +283,7 @@ const Register = () => {
                         <select
                           name="year"
                           onChange={handleChange}
-                          className="border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none"
+                              className="w-full border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none"
                           value={formData.year}
                         >
                           <option value="">Select</option>
@@ -300,7 +301,7 @@ const Register = () => {
                         <select
                           name="section"
                           onChange={handleChange}
-                          className="border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none"
+                              className="w-full border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none"
                           value={formData.section}
                         >
                           <option value="">Select</option>
@@ -327,8 +328,9 @@ const Register = () => {
                           type="text"
                           name="leetcode"
                           value={formData.leetcode}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200 rounded px-3 py-2"
+                              onChange={handleChange}
+                              placeholder="(eg: Aditya01)"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600 "
                         />
                       </div>
                       <div className="mb-4 w-full">
@@ -339,8 +341,9 @@ const Register = () => {
                           type="text"
                           name="hackerrank"
                           value={formData.hackerrank}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200 rounded px-3 py-2"
+                              onChange={handleChange}
+                              placeholder="(eg: Aditya02)"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                       <div className="mb-4 w-full">
@@ -351,8 +354,9 @@ const Register = () => {
                           type="text"
                           name="geeksforgeeks"
                           value={formData.geeksforgeeks}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200 rounded px-3 py-2"
+                              onChange={handleChange}
+                              placeholder="(eg: Aditya03)"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                       <div className="mb-4 w-full">
@@ -363,8 +367,9 @@ const Register = () => {
                           type="text"
                           name="codechef"
                           value={formData.codechef}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200 rounded px-3 py-2"
+                              onChange={handleChange}
+                              placeholder="(eg: Aditya04)"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                     </>

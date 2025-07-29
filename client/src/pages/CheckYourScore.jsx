@@ -43,7 +43,6 @@ export default function CheckYourScore() {
 
   useEffect(() => {
     fetchGrades();
-    console.log(grade);
   }, []);
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,7 +89,6 @@ export default function CheckYourScore() {
 
       // Optionally, you can display the result or just print to console
       setResult(data);
-      console.log("Scraped Data:", data);
     } catch (err) {
       setError(err.message);
       setResult(null);
@@ -114,7 +112,7 @@ export default function CheckYourScore() {
     <>
       <Navbar />
       <div className="bg-white max-w-5xl mx-auto shadow-md p-10 mb-10 rounded-xl">
-        <h1 className="text-center text-4xl underline font-bold text-blue-600 mb-8">
+        <h1 className="text-center text-4xl font-bold text-blue-600 mb-8">
           Check Your Score
         </h1>
         <form onSubmit={handleSubmit} className="w-full">
@@ -149,7 +147,41 @@ export default function CheckYourScore() {
         {error && <div className="text-red-600 mt-4">{error}</div>}
         {result && (
           <div>
-            <div className="bg-blue-50 grid grid-cols-1 md:grid-cols-3 rounded-lg gap-5 p-10 mt-10">
+            <div className="bg-blue-50 grid grid-cols-1 md:grid-cols-3 rounded-lg gap-5 p-5 mt-10">
+              <StatsCard
+                icon={<FiCode />}
+                color="success"
+                title="Score"
+                value={
+                  (result.data.leetcode?.Problems.Easy || 0) *
+                  getPoints("easy_lc") +
+                  (result.data.geeksforgeeks?.School || 0) *
+                  getPoints("school_gfg") +
+                  (result.data.geeksforgeeks?.Basic || 0) *
+                  getPoints("basic_gfg") +
+                  (result.data.geeksforgeeks?.Easy || 0) *
+                  getPoints("easy_gfg") +
+                  ((result.data.codechef?.problemsSolved || 0) *
+                    getPoints("problems_cc") +
+                    (result.data.leetcode?.Problems.Medium || 0) *
+                    getPoints("medium_lc") +
+                    (result.data.geeksforgeeks?.Medium || 0) *
+                    getPoints("medium_gfg")) +
+                  (result.data.leetcode?.Problems.Hard || 0) *
+                  getPoints("hard_lc") +
+                  (result.data.geeksforgeeks?.Hard || 0) *
+                  getPoints("hard_gfg") +
+                  (result.data.leetcode?.Badges || 0) * getPoints("badges_lc") +
+                  (result.data.codechef?.Badges || 0) * getPoints("badges_cc") +
+                  (result.data.leetcode?.Contests_Attended || 0) *
+                  getPoints("contests_lc") +
+                  (result.data.codechef?.Contests_Participated || 0) *
+                  getPoints("contests_cc") +
+                  (result.data.hackerrank?.Total_stars || 0) *
+                  getPoints("stars_hr") +
+                  (result.data.codechef?.Star || 0) * getPoints("stars_cc")
+                }
+              />
               <StatsCard
                 icon={<FiCode />}
                 color="blue"
@@ -176,40 +208,7 @@ export default function CheckYourScore() {
                   0
                 }
               />
-              <StatsCard
-                icon={<FiCode />}
-                color="success"
-                title="Score"
-                value={
-                  (result.data.leetcode?.Problems.Easy || 0) *
-                    getPoints("easy_lc") +
-                  (result.data.geeksforgeeks?.School || 0) *
-                    getPoints("school_gfg") +
-                  (result.data.geeksforgeeks?.Basic || 0) *
-                    getPoints("basic_gfg") +
-                  (result.data.geeksforgeeks?.Easy || 0) *
-                    getPoints("easy_gfg") +
-                  ((result.data.codechef?.problemsSolved || 0) *
-                    getPoints("problems_cc") +
-                    (result.data.leetcode?.Problems.Medium || 0) *
-                      getPoints("medium_lc") +
-                    (result.data.geeksforgeeks?.Medium || 0) *
-                      getPoints("medium_gfg")) +
-                  (result.data.leetcode?.Problems.Hard || 0) *
-                    getPoints("hard_lc") +
-                  (result.data.geeksforgeeks?.Hard || 0) *
-                    getPoints("hard_gfg") +
-                  (result.data.leetcode?.Badges || 0) * getPoints("badges_lc") +
-                  (result.data.codechef?.Badges || 0) * getPoints("badges_cc") +
-                  (result.data.leetcode?.Contests_Attended || 0) *
-                    getPoints("contests_lc") +
-                  (result.data.codechef?.Contests_Participated || 0) *
-                    getPoints("contests_cc") +
-                  (result.data.hackerrank?.Total_stars || 0) *
-                    getPoints("stars_hr") +
-                  (result.data.codechef?.Star || 0) * getPoints("stars_cc")
-                }
-              />
+
             </div>
             <div className="mt-8 p-4 bg-blue-50 rounded grid grid-cols-1 md:grid-cols-2 gap-4">
               {result.data?.leetcode && (
@@ -236,9 +235,12 @@ export default function CheckYourScore() {
                   name="HackerRank"
                   color="hover:text-green-600 hover:shadow-green-600"
                   icon="/HackerRank_logo.png"
-                  total={result.data.hackerrank?.Total_stars}
-                  breakdown={{}}
-                  subtitle="Badges Gained"
+                  total={result.data.hackerrank?.Total_stars || 0}
+                  breakdown={{
+                    "Badges": (result.data.hackerrank.Badges || [])
+                      .map(b => `${b.name}: ${b.stars}★`)
+                      .join(", "),
+                  }} subtitle="Badges Gained"
                 />
               )}
               {result.data?.codechef && (
@@ -246,7 +248,7 @@ export default function CheckYourScore() {
                   name="CodeChef"
                   color=" hover:text-orange-900 hover:shadow-orange-900"
                   icon="/codechef_logo.png"
-                  total={result.data.codechef?.Contests_Participated}
+                  total={result.data.codechef?.Contests_Participated || 0}
                   subtitle="Contests Participated"
                   breakdown={{
                     "Problems Solved": result.data.codechef?.problemsSolved,

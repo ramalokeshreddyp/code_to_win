@@ -5,11 +5,12 @@ const PlatformCard = ({
   color,
   icon,
   total,
+  ani,
   breakdown,
   subtitle = "Problems Solved",
 }) => (
   <div
-    className={`bg-[#ffffff] p-4 rounded-xl shadow-sm hover:shadow-md duration-300 trasition-all w-full ${color}`}
+    className={`bg-[#ffffff] p-4 rounded-xl shadow-sm hover:shadow-md duration-300 trasition-all w-full ${color}`} data-aos={`${ani}`}
   >
     <div className="flex  justify-between items-center md:mb-2 ">
       <h2 className="font-semibold text-base md:text-lg overflow-hidden max-w-lg">{name}</h2>

@@ -62,6 +62,7 @@ const HODList = () => {
   const startEdit = (hod) => {
     setEditingId(hod.hod_id);
     setEditForm({
+      id: hod_id,
       name: hod.name,
       email: hod.email,
       dept_code: hod.dept_code,
@@ -152,7 +153,7 @@ const HODList = () => {
 
   return (
     <div className="bg-white rounded-lg shadow">
-      <div className="p-4 border-b">
+      <div className="p-4 ">
         <h2 className="text-lg font-semibold">HOD List</h2>
         <p className="text-sm text-gray-500">
           View and filter department heads
@@ -160,7 +161,7 @@ const HODList = () => {
       </div>
 
       {/* Filters */}
-      <div className="p-4 border-b bg-gray-50">
+      <div className="p-4  bg-gray-50">
         <form
           onSubmit={applyFilters}
           className="flex flex-wrap items-center gap-4"
@@ -183,7 +184,7 @@ const HODList = () => {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end mt-5">
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
@@ -199,6 +200,9 @@ const HODList = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                ID
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Name
               </th>
@@ -223,6 +227,21 @@ const HODList = () => {
             ) : (
               hods.map((hod) => (
                 <tr key={hod.hod_id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingId === hod.hod_id ? (
+                      <input
+                        type="text"
+                        name="name"
+                        value={editForm.id}
+                        onChange={handleEditChange}
+                        className="border border-gray-300 rounded px-2 py-1 w-full"
+                      />
+                    ) : (
+                      <div className="font-medium text-gray-900">
+                        {hod.hod_id}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingId === hod.hod_id ? (
                       <input
@@ -304,7 +323,7 @@ const HODList = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex space-x-2 justify-end">
+                          <div className="flex space-x-5">
                         <button
                           onClick={() => startEdit(hod)}
                           className="text-blue-600 hover:text-blue-900"

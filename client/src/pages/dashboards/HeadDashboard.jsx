@@ -79,12 +79,12 @@ function StudentManagementTab({
   setSelectedStudent,
 }) {
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-white rounded-lg shadow overflow-hidden min-w-full">
       <h2 className="text-xl font-semibold mb-4">Student Management</h2>
       <p className="text-gray-500 mb-4">
         Manage student records, update details, and more.
       </p>
-      <div className="flex gap-4 mb-4 items-end">
+      <div className="flex gap-4 mb-4 items-end ">
         <div>
           <label className="block text-sm font-medium mb-1">Year</label>
           <select
@@ -115,14 +115,14 @@ function StudentManagementTab({
             ))}
           </select>
         </div>
-        <div className="relative max-w-xs mt-5">
+        <div className="relative mt-5">
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 opacity-85 text-blue-800" />
           <input
             type="text"
             placeholder="Search students..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg hover:bg-blue-50 focus:ring-1 focus:border-blue-100 transition focus:outline-none"
+            className="pl-10 pr-3 py-2 border w-[200px] border-gray-300 rounded-lg hover:bg-blue-50 focus:ring-1 focus:border-blue-100 transition focus:outline-none"
           />
         </div>
       </div>
@@ -133,6 +133,7 @@ function StudentManagementTab({
           </div>
         }
       >
+        <div className="overflow-scroll">
         <StudentTable
           students={filteredStudents}
           showBranch={true}
@@ -140,7 +141,8 @@ function StudentManagementTab({
           showSection={true}
           rankLabel="Rank"
           onProfileClick={setSelectedStudent}
-        />
+          />
+        </div>
       </Suspense>
     </div>
   );
@@ -189,7 +191,7 @@ function FacultyManagementTab({ years, sections, facultyList }) {
         <p className="text-gray-500 mb-4">
           Current faculty and their assignments
         </p>
-        <div className="space-y-4">
+        <div className="space-y-4 h-96 overflow-y-scroll">
           {facultyList.map((faculty, idx) => (
             <div
               key={idx}
@@ -467,7 +469,7 @@ function HeadDashboard() {
       )}
 
       <Navbar />
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 space-y-4 p-2 md:p-6">
           <h1 className="text-2xl font-semibold">HOD Dashboard</h1>
           <UserProfile user={currentUser} />

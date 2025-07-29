@@ -51,11 +51,12 @@ function Home() {
     fetchRanks();
   }, []);
   return (
-    <div className="">
+    <div className="overflow-hidden">
       <img src="/home_bg.svg" alt="" className="absolute -z-10 top-0 w-full" />
       <Navbar />
       <div className="relative flex flex-col lg:flex-row px-5 lgS:px-10 xl:px-40 justify-between items-center">
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left ">
+        <div className="flex flex-col items-center lg:items-start text-center lg:text-left "
+          data-aos="fade-right">
           <div className="flex flex-col">
             <h1 className="text-2xl lg:text-3xl xl:text-6xl font-bold tracking-wide mb-4">
               Track Your Coding <br /> Journey with Precision
@@ -71,11 +72,12 @@ function Home() {
             </button></Link>
           </div>
         </div>
-        <div className="my-8">
+        <div className="my-8"
+          data-aos="fade-left">
           <Login />
         </div>
       </div>
-      <section className="relative w-[95%] xl:w-3/4 mx-auto  mb-20 z-20">
+      <section className="relative w-[95%] xl:w-3/4 mx-auto  mb-20 z-20" data-aos="fade">
         <img
           src="/owl.gif"
           alt=""
@@ -87,7 +89,7 @@ function Home() {
             Top Coders This Month
           </p>
         </div>
-        <table className="min-w-full px-10 bg-white border-b border-t-2 border-t-gray-800 rounded-b-2xl overflow-hidden shadow-2xl text-sm md:text-base">
+        <table className="min-w-full px-10 bg-white rounded-b-2xl overflow-x-scroll shadow-2xl text-sm md:text-base">
           <thead className=" text-center">
             <tr>
               <th className="py-5 lg:px-4 px-2">Rank</th>

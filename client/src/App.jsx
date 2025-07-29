@@ -1,10 +1,13 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
 import CheckYourScore from "./pages/CheckYourScore";
 import Register from "./pages/Register";
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+
 // import StdDashboard from "./pages/dashboards/StdDashboard";
 
 // Lazy-loaded components
@@ -38,6 +41,12 @@ const ProtectedRoute = ({ children, role }) => {
 };
 
 const App = () => {
+  useEffect(() => {
+    AOS.init({
+      duration: 800, // animation duration
+      once: true,    // whether animation should happen only once
+    });
+  }, []);
   return (
     <>
       <Toaster position="top-right" />

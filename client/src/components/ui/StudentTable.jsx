@@ -15,39 +15,43 @@ const StudentTable = ({
           {/* 👈 dynamic column name */}
           <th className="py-3 px-4 text-left">Student</th>
           <th className="py-3 px-4">Roll Number</th>
-          {showBranch && <th className="py-3 px-4">Branch</th>}
-          {showYear && <th className="py-3 px-4">Year</th>}
-          {showSection && <th className="py-3 px-4">Section</th>}
+          {showBranch && <th className="py-3 px-4 sr-only md:not-sr-only">Branch</th>}
+          {showYear && <th className="py-3 px-4 sr-only md:not-sr-only">Year</th>}
+          {showSection && <th className="py-3 px-4 sr-only md:not-sr-only">Section</th>}
           <th className="py-3 px-4">Actions</th>
         </tr>
       </thead>
       <tbody>
         {students?.length > 0 ? (
-          students.map((student, i) => (
+          students.map((s, i) => (
             <tr
-              key={student.student_id}
-              className="hover:bg-gray-50 text-center"
+              key={s.student_id}
+              className="hover:bg-gray-50 text-center" data-aos="fade-left"
             >
               <td className="py-3 px-4">{i + 1}</td>
               <td className="py-3 px-4 text-left flex items-center gap-2">
                 <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 hidden md:flex items-center text-sm justify-center font-bold">
-                  {student.name
+                  {s.name
                     ?.split(" ")
                     .map((n) => n[0])
                     .join("")
                     .slice(0, 2)}
                 </div>
-                {student.name}
+                {s.name}
               </td>
-              <td className="py-3 px-4">{student.student_id}</td>
-              {showBranch && (
-                <td className="py-3 px-4 ">{student.dept_name}</td>
-              )}
-              {showYear && <td className="py-3 px-4">{student.year}</td>}
-              {showSection && <td className="py-3 px-4">{student.section}</td>}
+              <td className="py-3 px-4">{s.student_id}</td>
+              {showBranch && <td className="py-3 md:px-4 px-1 sr-only md:not-sr-only">
+                {s.dept_name}
+              </td>}
+              {showYear && <td className="py-3 md:px-4 px-1 sr-only md:not-sr-only">
+                {s.year}
+              </td>}
+              {showSection && <td className="py-3 md:px-4 px-1 sr-only md:not-sr-only">
+                {s.section}
+              </td>}
               <td className="py-3 px-4">
                 <div
-                  onClick={() => onProfileClick(student)}
+                  onClick={() => onProfileClick(s)}
                   className="text-gray-700 px-2 py-1 justify-center rounded hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                 >
                   <TbUserShare />

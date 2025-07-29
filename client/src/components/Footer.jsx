@@ -10,7 +10,7 @@ const Footer = () => {
         {/* Logo and Description */}
         <div>
           <h2 className="text-xl font-bold text-[#FFFFFF]">
-            Code<span className="text-[#FFFFFF]">Track</span>
+            Code Tracker
           </h2>
           <p className="mt-2 text-gray-400 md:max-w-xs">
             Helping students track and showcase their coding journey across
@@ -20,11 +20,11 @@ const Footer = () => {
             <a href="#" aria-label="GitHub" className="hover:text-[#FFFFFF]">
               <FiGithub />
             </a>
-            <a href="#" aria-label="LinkedIn" className="hover:text-[#FFFFFF]">
+            <a href="https://www.linkedin.com/school/adityauniversity/" aria-label="LinkedIn" className="hover:text-[#FFFFFF]">
               <FiLinkedin />
             </a>
             <a
-              href="mailto:your@email.com"
+              href="mailto:codetracker.contact@gmail.com"
               aria-label="Email"
               className="hover:text-[#FFFFFF]"
             >
@@ -92,11 +92,10 @@ const Footer = () => {
       </div>
 
       <div className="mt-10 text-center text-base text-gray-300 border-t border-gray-300 pt-6">
-       © 2025 Aditya University. | Developed by 
+        © 2025 Aditya University. | Developed by{" "}
         <a href="https://ofzen.in/" className="text-gray-100 hover:underline font-medium">
           Ofzen.in
         </a>
-        .
       </div>
     </footer>
   );

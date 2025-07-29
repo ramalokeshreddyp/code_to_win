@@ -48,34 +48,25 @@ const developers = [
     linkedin: "https://www.linkedin.com/in/nareen-kumar-mangam-0aaa11254",
     image: "/nareen_hidden.png", // replace with actual image
   },
-  {
-    name: "Kamal Sai Tillari",
-    role: "Scraper Engineer",
-    description:
-      "Builds and maintains scripts to extract data from external websites. Ensures scraped data is accurate, clean, and usable for integration into the application.",
-    github: "https://github.com/kamalsai369",
-    linkedin: "https://www.linkedin.com/in/kamal-sai-tillari-445201268",
-    image: "https://github.com/kamalsai369.png", // replace with actual image
-  },
 ];
 
 const Dev = () => {
   return (
     <>
       <Navbar />
-      <section className="flex flex-col items-center  mb-10 ">
+      <section className="flex flex-col items-center px-5 py-10">
         <h1 className="text-3xl font-bold mb-2">Meet Our Developers</h1>
         <p className="text-gray-600 mb-10 text-center">
-          The talented team behind the Student Coding Profile Dashboard
+          The talented team behind the Coding Tracker
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 max-w-7xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 max-w-7xl" data-aos="fade-up">
           {developers.map((dev, index) => (
             <div
               key={index}
-              className="bg-white shadow-md rounded-lg  hover:shadow-xl overflow-hidden transition-shadow"
+              className="bg-white shadow-md rounded-lg  hover:shadow-2xl overflow-hidden transition-shadow "
             >
-              <div className="flex ite>ms-center justify-between p-5 bg-gray-200">
+              <div className="flex items-center justify-between p-5 bg-gray-200">
                 <div className="flex flex-col justify-center items-start">
                   <h2 className="text-xl font-semibold">{dev.name}</h2>
                   <p className="text-sm text-gray-500">{dev.role}</p>

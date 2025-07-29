@@ -16,6 +16,7 @@ import {
   ResetPasswordModal,
 } from "../../components/Modals";
 import UserProfile from "../../components/ui/UserProfile";
+import Footer from "../../components/Footer";
 
 // Lazy-loaded components
 const RankingTable = lazy(() => import("../../components/Ranking"));
@@ -130,14 +131,16 @@ function FacultyDashboard() {
                         <p className="text-center">Loading Student Table...</p>
                       </>
                     }
-                  >
+                    >
+                      <div>
                     <StudentTable
                       students={memoizedStudents}
                       showBranch={true}
                       showYear={false}
                       showSection={true}
                       onProfileClick={setSelectedStudent}
-                    />
+                        />
+                      </div>
                   </Suspense>
                 </div>
               )}
@@ -276,6 +279,7 @@ function FacultyDashboard() {
           )}
         </div>
       </div>
+      <Footer />
     </>
   );
 }

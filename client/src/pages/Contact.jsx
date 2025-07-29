@@ -86,7 +86,7 @@ const ContactUs = () => {
             Contact Us
           </h2>
           <p className="text-gray-600 mb-8">
-            Have questions about the CodingProfileTracker ? We'd love to hear
+            Have questions about the Coding Tracker ? We'd love to hear
             from you. Fill out the form or reach out through any of the contact
             methods below.
           </p>
@@ -123,13 +123,13 @@ const ContactUs = () => {
 
         {/* Right Column */}
         <div className="w-full md:w-1/2">
-          <div className="bg-white border border-gray-400 rounded-lg shadow p-4 sm:p-6">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-md p-4 sm:p-6">
             <h3 className="text-lg md:text-xl font-semibold mb-4">
               Send Us Feedback
             </h3>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block  font-medium text-gray-700">
                   Name
                 </label>
                 <input
@@ -138,12 +138,12 @@ const ContactUs = () => {
                   value={form.name}
                   onChange={handleChange}
                   placeholder="Your name"
-                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+                  className="mt-1 w-full border border-gray-300 rounded p-3 focus:ring-2 focus:ring-blue-600 outline-0"
                   disabled={status.loading}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block  font-medium text-gray-700">
                   Email
                 </label>
                 <input
@@ -152,12 +152,12 @@ const ContactUs = () => {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="Your email address"
-                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+                  className="mt-1 w-full border border-gray-300 rounded p-3 focus:ring-2 focus:ring-blue-600 outline-0"
                   disabled={status.loading}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block  font-medium text-gray-700">
                   Message
                 </label>
                 <textarea
@@ -166,13 +166,13 @@ const ContactUs = () => {
                   value={form.message}
                   onChange={handleChange}
                   placeholder="How can we help you?"
-                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+                  className="mt-1 w-full border border-gray-300 rounded p-3 focus:ring-2 focus:ring-blue-600 outline-0"
                   disabled={status.loading}
                 ></textarea>
               </div>
               <button
                 type="submit"
-                className="bg-gray-900 text-white py-2 px-4 rounded flex items-center justify-center w-full gap-2 hover:bg-black transition disabled:opacity-60"
+                className="bg-blue-600 text-white py-2 px-4 rounded flex items-center justify-center w-full gap-2 hover:bg-blue-700 transition disabled:opacity-60"
                 disabled={status.loading}
               >
                 {status.loading ? (

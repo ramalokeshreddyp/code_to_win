@@ -99,7 +99,7 @@ const NotificationDropdown = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50" data-aos="fade">
           <div className="px-3 py-2 border-b border-gray-300 flex justify-between items-center">
             <h3 className="font-semibold text-gray-800">Notifications</h3>
             {notifications.length > 0 && (

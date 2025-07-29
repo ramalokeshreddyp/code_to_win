@@ -909,7 +909,7 @@ export function EditModal({ onClose, user }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 relative">
+      <div className="bg-white rounded-lg shadow-lg md:w-full md:max-w-sm w-xs p-6 relative" data-aos="fade-in">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-gray-600"
@@ -923,35 +923,34 @@ export function EditModal({ onClose, user }) {
             name="name"
             value={form.name}
             onChange={handleChange}
-            className="flex-1 border border-blue-50 rounded px-2 py-1 w-full"
+            className="flex-1 border border-gray-300 rounded px-2 py-1 w-full focus:ring-2 focus:ring-blue-600 focus:outline-0"
             placeholder="Name"
           />
           <input
             name="roll"
             value={form.roll}
             disabled
-            className="flex-1 border border-blue-100 rounded px-2 py-1 w-full cursor-not-allowed"
+            className="flex-1 border border-gray-300 rounded px-2 py-1 w-full cursor-not-allowed"
             placeholder="Registration Number"
           />
           <input
             name="year"
             value={form.year}
             disabled
-            className="flex-1 border border-blue-100 rounded px-2 py-1 w-full cursor-not-allowed"
+            className="flex-1 border border-gray-300 rounded px-2 py-1 w-full cursor-not-allowed"
             placeholder="Year"
           />
           <input
             name="section"
             value={form.section}
             disabled
-            className="flex-1 border border-blue-100 rounded px-2 py-1 w-full cursor-not-allowed"
+            className="flex-1 border border-gray-300 rounded px-2 py-1 w-full cursor-not-allowed"
             placeholder="Section"
           />
           <input
             name="email"
             value={form.email}
-            disabled
-            className="flex-1 border border-blue-100 rounded px-2 py-1 w-full cursor-not-allowed"
+            className="flex-1 border border-gray-300 rounded px-2 py-1 w-full focus:ring-2 focus:ring-blue-600 focus:outline-0 "
             placeholder="Email"
           />
           <div className="flex justify-end gap-2 mt-4">
@@ -1056,7 +1055,7 @@ export function UpdateProfileModal({ onClose, onSuccess, user }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg relative">
+      <div className="bg-white rounded-xl p-6 md:w-full md:max-w-sm w-xs shadow-lg relative" data-aos="fade-in">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-gray-600"
@@ -1179,7 +1178,7 @@ export function UserResetPasswordModal({ onClose, user }) {
   };
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 relative">
+      <div className="bg-white rounded-lg shadow-lg md:w-full md:max-w-sm w-xs p-6 relative" data-aos="fade-in">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-gray-600"

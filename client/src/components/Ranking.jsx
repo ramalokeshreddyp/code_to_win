@@ -348,7 +348,7 @@ const RankingTable = ({ filter }) => {
                   </select>
                 </div>
               </div>
-              <div className=" flex gap-x-3 mr-15 py-3">
+              <div className=" flex flex-col md:flex-row gap-3  py-3">
                 <div className="relative">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 opacity-85 text-blue-800" />
                   <input
@@ -356,24 +356,26 @@ const RankingTable = ({ filter }) => {
                     placeholder="Search students..."
                     value={search}
                     onChange={handleSearch}
-                    className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg hover:bg-blue-50  focus:ring-1  w-[240px] max-w-xs transition outline-none "
+                    className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg hover:bg-blue-50  focus:ring-1 focus:ring-blue-600  md:w-[240px] w-full transition outline-none "
                   />
                 </div>
+                <div className="flex gap-2">
                 <button
-                  className="px-2 items-center rounded-lg bg-blue-600 flex gap-2 text-white"
+                    className="p-2  items-center rounded-lg bg-blue-600 flex gap-2 text-white"
                   onClick={downloadSampleXLSX}
                   disabled={loading}
-                >
+                  >
                   <FaDownload /> Download
                 </button>
                 <button
-                  className="px-2 items-center rounded-lg bg-green-600 flex gap-2 text-white"
+                    className="p-2 w-3/4 items-center rounded-lg bg-green-600 flex gap-2 text-white"
                   onClick={updateRankings}
                   disabled={loading}
-                >
+                  >
                   <IoIosSync className={loading ? "animate-spin" : ""} /> Update
                   Rankings
                 </button>
+                </div>
               </div>
             </div>
           </>
@@ -408,7 +410,7 @@ const RankingTable = ({ filter }) => {
               </tr>
             ) : (
               filteredRanks.map((s) => (
-                <tr key={s.student_id} className="hover:bg-gray-50 text-center">
+                <tr key={s.student_id} className="hover:bg-gray-50 text-center" data-aos="fade-left">
                   <td className="py-3 px-1 md:px-4 ">
                     <RankBadge rank={s.rank} />
                   </td>
@@ -438,7 +440,7 @@ const RankingTable = ({ filter }) => {
                       onClick={() => setSelectedStudent(s)}
                       className="text-gray-700 px-1 py-1 justify-center rounded hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                     >
-                      <TbUserShare />
+                      <TbUserShare /><span className="hidden md:block">Profile</span>
                     </div>
                   </td>
                 </tr>
@@ -492,13 +494,13 @@ const RankingTable = ({ filter }) => {
             </div>
           </div>
         )}
-
         {/* Loading indicator */}
         {loading && (
           <div className="flex justify-center my-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
           </div>
         )}
+
       </div>
     </>
   );
