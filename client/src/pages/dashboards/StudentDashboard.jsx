@@ -138,7 +138,7 @@ const StudentDashboard = () => {
         <div className="p-4 flex md:flex-row flex-col gap-4">
           {/* Sidebar */}
           <div
-            className="bg-white rounded-xl shadow-lg p-6  lg:w-md h-fit -mt-24 z-20"
+            className="bg-white rounded-xl shadow-lg p-6  lg:max-w-sm h-fit -mt-24 z-20"
             data-aos="fade-out"
           >
             <div className="flex flex-r items-center mb-4">
@@ -187,7 +187,9 @@ const StudentDashboard = () => {
               <p className="font-semibold">Personal Information</p>
 
               <p className="flex  justify-between">
-                <span className="font-semibold text-left">Name:</span>{" "}
+                <span className="font-semibold text-left line-clamp-3">
+                  Name:
+                </span>{" "}
                 {currentUser.name}
               </p>
               <p className="flex justify-between">
@@ -196,7 +198,9 @@ const StudentDashboard = () => {
               </p>
               <p className="flex justify-between">
                 <span className="font-semibold text-left">Email:</span>{" "}
-                {currentUser.email}
+                <span className="inline-block  text-end w-2/3 truncate">
+                  {currentUser.email}
+                </span>
               </p>
               <button
                 onClick={() => setChangepassword(true)}
@@ -225,23 +229,28 @@ const StudentDashboard = () => {
                       currentUser.coding_profiles?.[idKey] || "Not Provided";
                     const status = currentUser.coding_profiles?.[statusKey];
                     return (
-                      <div key={platform} className="flex justify-between">
+                      <div
+                        key={platform}
+                        className="flex justify-between items-center"
+                      >
                         <span className="font-semibold text-left••••••••••••••">
                           {platform.charAt(0).toUpperCase() + platform.slice(1)}
                         </span>
-                        <p className="text-gray-500">
-                          {username}
+                        <p className="text-gray-500 text-end inline-block  truncate ">
+                          <span className="inline-block w-1/2 truncate text-end">
+                            {username}
+                          </span>
                           {status === "accepted" && (
-                            <FiCheck className="inline ml-1 text-green-500" />
+                            <FiCheck className="inline ml-1 -mt-3 text-green-500" />
                           )}
                           {status === "rejected" && (
-                            <FiX className="inline ml-1 text-red-500" />
+                            <FiX className="inline ml-1 -mt-3 text-red-500" />
                           )}
                           {status === "pending" && (
-                            <FiClock className="inline ml-1 text-gray-500" />
+                            <FiClock className="inline ml-1 -mt-3 text-gray-500" />
                           )}
                           {status === "suspended" && (
-                            <FiPause className="inline ml-1 text-yellow-500" />
+                            <FiPause className="inline ml-1 -mt-3 text-yellow-500" />
                           )}
                         </p>
                       </div>
