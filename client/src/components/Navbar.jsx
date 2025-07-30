@@ -5,7 +5,7 @@ import { FiMenu, FiX, FiLogOut, FiUser } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import NotificationDropdown from "./ui/NotificationDropdown";
 
-const Navbar = () => {
+const Navbar = ({ toggleSidebar }) => {
   // Replace this with your actual authentication logic
   const { logout, currentUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,10 +16,11 @@ const Navbar = () => {
       : "text-gray-800 hover:text-blue-600 pb-1";
   return (
     <nav
-      className={`${currentUser
-        ? "bg-white shadow-lg border-b border-gray-200 sticky top-0 py-1 z-50"
-        : "py-5"
-        }`}
+      className={`${
+        currentUser
+          ? "bg-white shadow-lg border-b border-gray-200 sticky top-0 py-1 z-50"
+          : "py-5"
+      }`}
     >
       <div className={`mx-auto px-4 sm:px-6 lg:px-10 xl:px-40`}>
         <div className="flex justify-between h-16 items-center">
@@ -29,7 +30,9 @@ const Navbar = () => {
               <img src="/logo.svg" alt="" className="w-9 md:w-15" />
               <div className="border border-gray-500 h-10" />
               <img src="/au_logo.svg" alt="" className="md:w-14 w-8" />
-              <h1 className="md:text-xl text-lg font-bold text-gray-800">CodeTracker</h1>
+              <h1 className="md:text-xl text-lg font-bold text-gray-800">
+                CodeTracker
+              </h1>
             </div>
           </NavLink>
           {/* Desktop Menu */}
@@ -58,13 +61,6 @@ const Navbar = () => {
                   ({currentUser?.role})
                 </span>
               </div>
-              <div
-                onClick={logout}
-                className="flex items-center gap-2 on hover:text-blue-800 p-2 cursor-pointer"
-              >
-                <FiLogOut />
-                Logout
-              </div>
             </div>
           )}
           {/* Mobile Hamburger */}
@@ -79,12 +75,12 @@ const Navbar = () => {
             ) : (
               <>
                 <NotificationDropdown />
-                <div
-                  onClick={logout}
-                  className="flex items-center gap-2 on hover:text-blue-800 p-2 cursor-pointer"
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 text-xl text-gray-700 hover:text-blue-800 focus:outline-none"
                 >
-                  <FiLogOut />
-                </div>
+                  <FiMenu />
+                </button>
               </>
             )}
           </div>

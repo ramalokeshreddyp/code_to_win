@@ -1,14 +1,13 @@
-import React, { useEffect, useState, lazy, Suspense } from "react";
+import React, { useEffect, useState, lazy, Suspense, useMemo } from "react";
 import { TbUserShare } from "react-icons/tb";
 const ViewProfile = lazy(() => import("./ViewProfile"));
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useMeta } from "../context/MetaContext";
 import LoadingSpinner from "../common/LoadingSpinner";
 import { FaDownload } from "react-icons/fa6";
 import { IoIosSync } from "react-icons/io";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
-import Pagination from "./ui/Pagination";
 
 const RankBadge = ({ rank }) => {
   if (rank === 1)
@@ -21,23 +20,16 @@ const RankBadge = ({ rank }) => {
 };
 
 const TOP_X_OPTIONS = [
-  { label: "All Students", value: "" },
+  { label: "All", value: "" },
   { label: "Top 5", value: 5 },
   { label: "Top 10", value: 10 },
-  { label: "Top 25", value: 25 },
   { label: "Top 50", value: 50 },
   { label: "Top 100", value: 100 },
 ];
 
 const RankingTable = ({ filter }) => {
   const [ranks, setRanks] = useState([]);
-  const [allRanks, setAllRanks] = useState([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    totalStudents: 0,
-    totalPages: 0,
-  });
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     dept: "",
     year: "",
@@ -45,27 +37,15 @@ const RankingTable = ({ filter }) => {
   });
   const [topX, setTopX] = useState("");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50);
   const { depts, years, sections } = useMeta();
 
-  const fetchRanks = async (forDownload = false) => {
+  const fetchRanks = async () => {
     try {
-      setLoading(true);
       let params = { ...filters };
-
-      if (!forDownload) {
-        if (topX) {
-          params.limit = topX;
-        } else {
-          params.page = pagination.page;
-          params.limit = pagination.limit;
-        }
-      } else if (forDownload && topX) {
-        params.limit = topX;
-      }
-
-      if (search) params.search = search;
+      if (topX) params.limit = topX;
 
       // Build query string
       const queryString = Object.entries(params)
@@ -74,7 +54,7 @@ const RankingTable = ({ filter }) => {
         .join("&");
 
       let url;
-      if (!filters.dept && !filters.year && !filters.section && !search) {
+      if (!filters.dept && !filters.year && !filters.section) {
         url = `/api/ranking/overall${queryString ? "?" + queryString : ""}`;
       } else {
         url = `/api/ranking/filter${queryString ? "?" + queryString : ""}`;
@@ -83,48 +63,20 @@ const RankingTable = ({ filter }) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch rankings");
       const data = await res.json();
-
-      if (forDownload) {
-        setAllRanks(data.students || []);
-      } else {
-        setRanks(data.students || []);
-        setPagination(
-          data.pagination || {
-            page: 1,
-            limit: 100,
-            totalStudents: 0,
-            totalPages: 0,
-          }
-        );
-      }
+      setRanks(data);
     } catch (err) {
       console.error(err);
-      if (!forDownload) setRanks([]);
-    } finally {
-      setLoading(false);
+      setRanks([]);
     }
   };
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchRanks();
-    }, search ? 300 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [JSON.stringify(filters), topX ? 1 : pagination.page, search, topX]);
+    fetchRanks();
+  }, [JSON.stringify(filters), topX]);
 
   const handleChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    // Reset to page 1 when changing filters
-    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
-
-  const filteredRanks = ranks;
-
-  // Function to trigger manual ranking update
   const updateRankings = async () => {
     try {
       setLoading(true);
@@ -153,9 +105,47 @@ const RankingTable = ({ filter }) => {
     }
   };
 
-  const downloadSampleXLSX = async () => {
-    await fetchRanks(true);
+  const filteredRanks = ranks.filter(
+    (s) =>
+      s.name?.toLowerCase().includes(search.toLowerCase()) ||
+      s.student_id?.toLowerCase().includes(search.toLowerCase())
+  );
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredRanks.length / itemsPerPage);
+  const paginatedRanks = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredRanks.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredRanks, currentPage, itemsPerPage]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filters, topX]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const downloadSampleXLSX = () => {
+    // 1. Simulate a large dataset
     const largeData = [];
     largeData.push([
       "Student Id",
@@ -182,7 +172,7 @@ const RankingTable = ({ filter }) => {
       "Score",
     ]);
 
-    allRanks.forEach((rank) => {
+    ranks.forEach((rank) => {
       largeData.push([
         rank.student_id,
         rank.name,
@@ -217,7 +207,7 @@ const RankingTable = ({ filter }) => {
     const filenamePrefix =
       `${deptName || ""}${filters?.year ? " " + filters.year + "_year" : ""}${
         filters?.section ? " " + filters.section + "_sec" : ""
-        } ${filter.topX ? "" + filter.topX + "_top" : ""}`.trim() || "overall";
+      }`.trim() || "overall";
     // 2. Convert array of arrays to worksheet
     const worksheet = XLSX.utils.aoa_to_sheet(largeData);
 
@@ -264,7 +254,7 @@ const RankingTable = ({ filter }) => {
         {filter && (
           <>
             <div className="flex flex-wrap justify-between gap-2 mb-6">
-              <div className="grid grid-cols-3 md:grid-cols-4 items-center gap-4 text-sm ">
+              <div className="grid grid-cols-3 md:grid-cols-4  items-center gap-4 text-sm ">
                 <div>
                   <label
                     className="block text-xs font-semibold text-gray-500 mb-1"
@@ -333,15 +323,12 @@ const RankingTable = ({ filter }) => {
                     className="block text-xs font-semibold text-gray-500 mb-1"
                     htmlFor="topx"
                   >
-                    Show
+                    Top
                   </label>
                   <select
                     id="topx"
                     value={topX}
-                    onChange={(e) => {
-                      setTopX(e.target.value);
-                      setPagination((prev) => ({ ...prev, page: 1 }));
-                    }}
+                    onChange={(e) => setTopX(e.target.value)}
                     className="border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none"
                   >
                     {TOP_X_OPTIONS.map((opt) => (
@@ -352,33 +339,32 @@ const RankingTable = ({ filter }) => {
                   </select>
                 </div>
               </div>
-              <div className=" flex flex-col md:flex-row gap-3  py-3">
+              <div className=" flex gap-x-5 mr-15 py-3 flex-col md:flex-row justify-end gap-y-3">
                 <div className="relative">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 opacity-85 text-blue-800" />
                   <input
                     type="text"
                     placeholder="Search students..."
                     value={search}
-                    onChange={handleSearch}
-                    className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg hover:bg-blue-50  focus:ring-1 focus:ring-blue-600  md:w-[240px] w-full transition outline-none "
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg hover:bg-blue-50  focus:ring-1  w-[240px] max-w-xs transition outline-none "
                   />
                 </div>
                 <div className="flex gap-2">
-                <button
-                    className="p-2  items-center rounded-lg bg-blue-600 flex gap-2 text-white"
-                  onClick={downloadSampleXLSX}
-                  disabled={loading}
+                  <button
+                    className="p-2 items-center rounded-lg bg-blue-600 flex gap-2 text-white  "
+                    onClick={downloadSampleXLSX}
                   >
-                  <FaDownload /> Download
-                </button>
-                <button
-                    className="p-2 w-3/4 items-center rounded-lg bg-green-600 flex gap-2 text-white"
-                  onClick={updateRankings}
-                  disabled={loading}
+                    <FaDownload /> Download
+                  </button>
+                  <button
+                    className="p-2 items-center rounded-lg bg-green-600 flex gap-2 text-white"
+                    onClick={updateRankings}
+                    disabled={loading}
                   >
-                  <IoIosSync className={loading ? "animate-spin" : ""} /> Update
-                  Rankings
-                </button>
+                    <IoIosSync className={loading ? "animate-spin" : ""} />{" "}
+                    Update Rankings
+                  </button>
                 </div>
               </div>
             </div>
@@ -406,15 +392,15 @@ const RankingTable = ({ filter }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredRanks.length === 0 ? (
+            {paginatedRanks.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-10 text-gray-500">
                   No students in ranking
                 </td>
               </tr>
             ) : (
-              filteredRanks.map((s) => (
-                <tr key={s.student_id} className="hover:bg-gray-50 text-center" data-aos="fade-left">
+              paginatedRanks.map((s) => (
+                <tr key={s.student_id} className="hover:bg-gray-50 text-center">
                   <td className="py-3 px-1 md:px-4 ">
                     <RankBadge rank={s.rank} />
                   </td>
@@ -444,7 +430,7 @@ const RankingTable = ({ filter }) => {
                       onClick={() => setSelectedStudent(s)}
                       className="text-gray-700 px-1 py-1 justify-center rounded hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                     >
-                      <TbUserShare /><span className="hidden md:block">Profile</span>
+                      <TbUserShare />
                     </div>
                   </td>
                 </tr>
@@ -453,23 +439,50 @@ const RankingTable = ({ filter }) => {
           </tbody>
         </table>
 
-        {!topX && (
-          <Pagination
-            currentPage={pagination.page}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.totalStudents}
-            itemsPerPage={ranks.length}
-            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
-            loading={loading}
-          />
-        )}
-        {/* Loading indicator */}
-        {loading && (
-          <div className="flex justify-center my-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+            <div className="text-sm text-gray-600">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, filteredRanks.length)} of{" "}
+              {filteredRanks.length} students
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex items-center gap-1"
+              >
+                <FaChevronLeft size={12} /> Previous
+              </button>
+
+              <div className="flex gap-1">
+                {getPageNumbers().map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-2 border rounded-lg ${
+                      currentPage === page
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex items-center gap-1"
+              >
+                Next <FaChevronRight size={12} />
+              </button>
+            </div>
           </div>
         )}
-
       </div>
     </>
   );

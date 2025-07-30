@@ -4,11 +4,23 @@ import Navbar from "../../components/Navbar";
 import LoadingSpinner from "../../common/LoadingSpinner";
 import Footer from "../../components/Footer";
 import UserProfile from "../../components/ui/UserProfile";
+import DashboardSidebar from "../../components/DashboardSidebar";
+import {
+  FiMenu,
+  FiUsers,
+  FiUserCheck,
+  FiSettings,
+  FiUserPlus,
+  FiMail,
+  FiBarChart2,
+} from "react-icons/fi";
 
 // Lazy-loaded components
 const RankingTable = lazy(() => import("../../components/Ranking"));
 const ViewProfile = lazy(() => import("../../components/ViewProfile"));
-const ContactRequests = lazy(() => import("../../components/ui/ContactRequests"));
+const ContactRequests = lazy(() =>
+  import("../../components/ui/ContactRequests")
+);
 const FacultyList = lazy(() => import("../../components/ui/FacultyList"));
 const HODList = lazy(() => import("../../components/ui/HODList"));
 const AddFacultyModal = lazy(() =>
@@ -60,13 +72,23 @@ const metricToPlatform = {
 const platformOrder = ["LeetCode", "GeeksforGeeks", "CodeChef", "HackerRank"];
 
 function AdminDashboard() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedTab, setSelectedTab] = useState("StudentRanking");
   const [grading, setGrading] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userMgmtTab, setUserMgmtTab] = useState("addBranch");
   const [changedMetrics, setChangedMetrics] = useState(new Set());
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const menuItems = [
+    { key: "StudentRanking", label: "Student Ranking", icon: <FiBarChart2 /> },
+    { key: "FacultyList", label: "Faculty List", icon: <FiUsers /> },
+    { key: "HODList", label: "HOD List", icon: <FiUserCheck /> },
+    { key: "GradingSystem", label: "Grading System", icon: <FiSettings /> },
+    { key: "UserManagment", label: "User Management", icon: <FiUserPlus /> },
+    { key: "ContactRequests", label: "Contact Requests", icon: <FiMail /> },
+  ];
 
   // Helper to make metric names readable
   const metricLabels = {
@@ -165,221 +187,188 @@ function AdminDashboard() {
           />
         )}
       </Suspense>
-      <Navbar />
-      <div className="bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 space-y-4 p-2 md:p-6">
-          <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
-          {/* Admin Info */}
-          <UserProfile user={currentUser} />
-          {/* Section Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h2 className="text-gray-500 text-sm">Total Students</h2>
-              <p className="text-2xl font-bold">{currentUser.total_students}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h2 className="text-gray-500 text-sm">Total HOD's</h2>
-              <p className="text-2xl font-bold">{currentUser.total_hod}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h2 className="text-gray-500 text-sm">Total Faculty</h2>
-              <p className="text-2xl font-bold">{currentUser.total_faculty}</p>
-            </div>
-          </div>
-          {/* Tabs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 justify-around rounded bg-gray-100 border-gray-200 border gap-2 md:gap-4 p-1 mb-4 text-base">
-            <button
-              onClick={() => setSelectedTab("StudentRanking")}
-              className={`flex-1 min-w-[120px] py-1 rounded cursor-pointer ${
-                selectedTab === "StudentRanking" ? "bg-white text-black" : ""
-              }`}
-            >
-              Student Ranking
-            </button>
-            <button
-              onClick={() => setSelectedTab("FacultyList")}
-              className={`flex-1 min-w-[120px] py-1 rounded cursor-pointer ${
-                selectedTab === "FacultyList" ? "bg-white text-black" : ""
-              }`}
-            >
-              Faculty List
-            </button>
-            <button
-              onClick={() => setSelectedTab("HODList")}
-              className={`flex-1 min-w-[120px] py-1 rounded cursor-pointer ${
-                selectedTab === "HODList" ? "bg-white text-black" : ""
-              }`}
-            >
-              HOD List
-            </button>
-            <button
-              onClick={() => setSelectedTab("GradingSystem")}
-              className={`flex-1 min-w-[120px] py-1 rounded cursor-pointer ${
-                selectedTab === "GradingSystem" ? "bg-white text-black" : ""
-              }`}
-            >
-              Grading System
-            </button>
-            <button
-              onClick={() => setSelectedTab("UserManagment")}
-              className={`flex-1 min-w-[120px] py-1 rounded cursor-pointer ${
-                selectedTab === "UserManagment" ? "bg-white text-black" : ""
-              }`}
-            >
-              User Managment
-            </button>
-            <button
-              onClick={() => setSelectedTab("ContactRequests")}
-              className={`flex-1 min-w-[120px] py-1 rounded cursor-pointer ${
-                selectedTab === "ContactRequests" ? "bg-white text-black" : ""
-              }`}
-            >
-              Contact Requests
-            </button>
-          </div>
-          {/* Student Ranking */}
-          {selectedTab === "StudentRanking" && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <RankingTable filter={true} />
-            </Suspense>
-          )}
-          {/* Grading System */}
-          {selectedTab === "GradingSystem" && (
-            <div className="bg-white px-4 py-8">
-              <h1 className="text-2xl font-bold text-center mb-6">
-                Grading Configuration
-              </h1>
-              {loading ? (
-                <div className="text-center py-8">
-                  Loading grading config...
-                </div>
-              ) : (
-                <form
-                  onSubmit={handleGradingSubmit}
-                  className="space-y-8 mx-auto"
-                >
-                  {platformOrder.map(
-                    (platform) =>
-                      gradingByPlatform[platform] && (
-                        <div key={platform} className="mb-6 ">
-                          <h2 className="text-xl font-semibold mb-4 text-blue-700">
-                            {platform}
-                          </h2>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {gradingByPlatform[platform].map((item, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between py-2"
-                              >
-                                <span className="font-medium">
-                                  {metricLabels[item.metric] || item.metric}
-                                </span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={item.points}
-                                  onChange={(e) =>
-                                    handleGradingChange(
-                                      grading.findIndex(
-                                        (g) => g.metric === item.metric
-                                      ),
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-24 border border-gray-200 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                  )}
-                  <div className="text-center">
-                    <button
-                      type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded transition w-full"
-                    >
-                      Save Configuration
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-          {/* Faculty List */}
-          {selectedTab === "FacultyList" && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <FacultyList />
-            </Suspense>
-          )}
+      <Navbar toggleSidebar={() => setSidebarOpen(true)} />
+      <div className="flex bg-gray-50 min-h-screen">
+        <DashboardSidebar
+          isOpen={sidebarOpen}
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          selectedTab={selectedTab}
+          setSelectedTab={setSelectedTab}
+          menuItems={menuItems}
+          title="Admin Dashboard"
+          onLogout={logout}
+        />
 
-          {/* HOD List */}
-          {selectedTab === "HODList" && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <HODList />
-            </Suspense>
-          )}
+        <div className="flex-1 lg:ml-64">
+          <div className="p-4 md:p-6 space-y-4">
+            {/* Admin Info */}
+            <UserProfile user={currentUser} />
 
-          {/* Contact Requests */}
-          {selectedTab === "ContactRequests" && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <ContactRequests />
-            </Suspense>
-          )}
-          
-          {/* User Management */}
-          {selectedTab === "UserManagment" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 max-w-6xl mx-auto">
-              {/* User Management */}
-              <div className="bg-white shadow rounded-lg p-0 flex flex-col md:flex-row min-h-[340px] col-span-2">
-                {/* Left Menu */}
-                <div
-                  className="md:w-1/4
-                 bg-gray-50 p-4"
-                >
-                  <h2 className="text-xl font-semibold mb-4">
-                    User Management
-                  </h2>
-                  <ul className="space-y-2">
-                    {[
-                      { key: "addBranch", label: "Add Branch" }, // <-- Added here
-                      { key: "addStudent", label: "Add Student" },
-                      { key: "addFaculty", label: "Add Faculty" },
-                      { key: "addHOD", label: "Add HOD" },
-                      { key: "resetPassword", label: "Reset Password" },
-                      { key: "bulkImport", label: "Bulk Import" },
-                    ].map((item) => (
-                      <li key={item.key}>
-                        <button
-                          className={`w-full text-left px-3 py-2 rounded transition ${
-                            userMgmtTab === item.key
-                              ? "bg-blue-600 text-white"
-                              : "hover:bg-blue-100"
-                          }`}
-                          onClick={() => setUserMgmtTab(item.key)}
-                        >
-                          {item.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                {/* Right Content */}
-                <div className="flex-1 p-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    {userMgmtTab === "addStudent" && (
-                      <AddIndividualStudentModel />
-                    )}
-                    {userMgmtTab === "addFaculty" && <AddFacultyModal />}
-                    {userMgmtTab === "addHOD" && <AddHODModal />}
-                    {userMgmtTab === "resetPassword" && <ResetPasswordModal />}
-                    {userMgmtTab === "bulkImport" && <BulkImportModal />}
-                    {userMgmtTab === "addBranch" && <AddBranchModal />}
-                  </Suspense>
-                </div>
+            {/* Section Stats Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-lg shadow">
+                <h2 className="text-gray-500 text-sm">Total Students</h2>
+                <p className="text-2xl font-bold">
+                  {currentUser.total_students}
+                </p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow">
+                <h2 className="text-gray-500 text-sm">Total HOD's</h2>
+                <p className="text-2xl font-bold">{currentUser.total_hod}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow">
+                <h2 className="text-gray-500 text-sm">Total Faculty</h2>
+                <p className="text-2xl font-bold">
+                  {currentUser.total_faculty}
+                </p>
               </div>
             </div>
-          )}
+            {/* Student Ranking */}
+            {selectedTab === "StudentRanking" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <RankingTable filter={true} />
+              </Suspense>
+            )}
+            {/* Grading System */}
+            {selectedTab === "GradingSystem" && (
+              <div className="bg-white px-4 py-8">
+                <h1 className="text-2xl font-bold text-center mb-6">
+                  Grading Configuration
+                </h1>
+                {loading ? (
+                  <div className="text-center py-8">
+                    Loading grading config...
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={handleGradingSubmit}
+                    className="space-y-8 mx-auto"
+                  >
+                    {platformOrder.map(
+                      (platform) =>
+                        gradingByPlatform[platform] && (
+                          <div key={platform} className="mb-6 ">
+                            <h2 className="text-xl font-semibold mb-4 text-blue-700">
+                              {platform}
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {gradingByPlatform[platform].map((item, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center justify-between py-2"
+                                >
+                                  <span className="font-medium">
+                                    {metricLabels[item.metric] || item.metric}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={item.points}
+                                    onChange={(e) =>
+                                      handleGradingChange(
+                                        grading.findIndex(
+                                          (g) => g.metric === item.metric
+                                        ),
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-24 border border-gray-200 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                    )}
+                    <div className="text-center">
+                      <button
+                        type="submit"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded transition w-full"
+                      >
+                        Save Configuration
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+            {/* Faculty List */}
+            {selectedTab === "FacultyList" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <FacultyList />
+              </Suspense>
+            )}
+
+            {/* HOD List */}
+            {selectedTab === "HODList" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <HODList />
+              </Suspense>
+            )}
+
+            {/* Contact Requests */}
+            {selectedTab === "ContactRequests" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <ContactRequests />
+              </Suspense>
+            )}
+
+            {/* User Management */}
+            {selectedTab === "UserManagment" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 max-w-6xl mx-auto">
+                {/* User Management */}
+                <div className="bg-white shadow rounded-lg p-0 flex flex-col md:flex-row min-h-[340px] col-span-2">
+                  {/* Left Menu */}
+                  <div
+                    className="md:w-1/4
+                 bg-gray-50 p-4"
+                  >
+                    <h2 className="text-xl font-semibold mb-4">
+                      User Management
+                    </h2>
+                    <ul className="space-y-2">
+                      {[
+                        { key: "addBranch", label: "Add Branch" }, // <-- Added here
+                        { key: "addStudent", label: "Add Student" },
+                        { key: "addFaculty", label: "Add Faculty" },
+                        { key: "addHOD", label: "Add HOD" },
+                        { key: "resetPassword", label: "Reset Password" },
+                        { key: "bulkImport", label: "Bulk Import" },
+                      ].map((item) => (
+                        <li key={item.key}>
+                          <button
+                            className={`w-full text-left px-3 py-2 rounded transition ${
+                              userMgmtTab === item.key
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-blue-100"
+                            }`}
+                            onClick={() => setUserMgmtTab(item.key)}
+                          >
+                            {item.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {/* Right Content */}
+                  <div className="flex-1 p-6">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      {userMgmtTab === "addStudent" && (
+                        <AddIndividualStudentModel />
+                      )}
+                      {userMgmtTab === "addFaculty" && <AddFacultyModal />}
+                      {userMgmtTab === "addHOD" && <AddHODModal />}
+                      {userMgmtTab === "resetPassword" && (
+                        <ResetPasswordModal />
+                      )}
+                      {userMgmtTab === "bulkImport" && <BulkImportModal />}
+                      {userMgmtTab === "addBranch" && <AddBranchModal />}
+                    </Suspense>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <Footer />

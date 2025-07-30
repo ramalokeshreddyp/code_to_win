@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db"); // MySQL connection
 const { logger } = require("../utils"); // <-- Add logger
-const updateAllRankings = require("../updateRankings");
 
 // Calculate score expression for ranking
 async function getScoreExpression() {
@@ -18,21 +17,11 @@ router.get("/overall", async (req, res) => {
   logger.info("Fetching overall ranking");
   try {
     const scoreExpr = await getScoreExpression();
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 500, 1000)); // Reduced default to 500, max 1000
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const offset = (page - 1) * limit;
-    
-    // Get total count for pagination
-    const [countResult] = await db.query(
-      `SELECT COUNT(*) as total FROM student_profiles`
-    );
-    const totalStudents = countResult[0].total;
-    const totalPages = Math.ceil(totalStudents / limit);
-    
-    // First query: Get student rankings with score calculation
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 10000)); // max 1000
     const [rows] = await db.query(
       `SELECT 
-  sp.*,
+  sp.student_id, 
+  sp.*, 
   d.dept_name, 
   ${scoreExpr.replace(/p\.(\w+)/g, (match, metric) => {
     if (metric.includes("_lc"))
@@ -50,87 +39,46 @@ JOIN student_performance p ON sp.student_id = p.student_id
 LEFT JOIN student_coding_profiles cp ON sp.student_id = cp.student_id
 JOIN dept d ON sp.dept_code = d.dept_code
 ORDER BY score DESC, sp.student_id ASC
-LIMIT ? OFFSET ?`,
-      [limit, offset]
+LIMIT ?`,
+      [limit]
     );
-    
-    // Add rank field
-    rows.forEach((student, i) => {
-      student.rank = offset + i + 1;
-    });
-    
-    // Get all student IDs for batch fetching
-    const studentIds = rows.map(student => student.student_id);
-    
-    if (studentIds.length === 0) {
-      return res.json({
-        students: [],
-        pagination: {
-          page,
-          limit,
-          totalStudents,
-          totalPages
-        }
-      });
+    // Check if all scores are 0
+    const allZero = rows.every((s) => s.score === 0);
+
+    // If all scores are zero, sort by student_id (already handled by ORDER BY above)
+    if (allZero) {
+      rows.sort((a, b) => (a.student_id > b.student_id ? 1 : -1));
     }
-    
-    // Batch update ranks in database (only if needed)
-    const updateBatch = rows.map(student => [
-      student.score,
-      student.rank,
-      student.student_id
-    ]);
-    
-    // Use a transaction for batch updates
-    const connection = await db.getConnection();
-    try {
-      await connection.beginTransaction();
-      
-      // Batch update in chunks of 100
-      const chunkSize = 100;
-      for (let i = 0; i < updateBatch.length; i += chunkSize) {
-        const chunk = updateBatch.slice(i, i + chunkSize);
-        await connection.query(
-          "INSERT INTO student_profiles (score, overall_rank, student_id) VALUES ? " +
-          "ON DUPLICATE KEY UPDATE score=VALUES(score), overall_rank=VALUES(overall_rank)",
-          [chunk.map(row => [row[0], row[1], row[2]])]
-        );
-      }
-      
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      logger.error(`Error updating ranks: ${error.message}`);
-    } finally {
-      connection.release();
+
+    // Add rank field and update DB
+    for (let i = 0; i < rows.length; i++) {
+      rows[i].rank = i + 1;
+      // Update the rank in the database
+      await db.query(
+        "UPDATE student_profiles SET score=?, overall_rank = ? WHERE student_id = ?",
+        [rows[i].score, rows[i].rank, rows[i].student_id]
+      );
     }
-    
-    // Batch fetch performance data
-    const [performances] = await db.query(
-      `SELECT p.*, 
-              cp.leetcode_status, cp.codechef_status, 
-              cp.geeksforgeeks_status, cp.hackerrank_status 
-       FROM student_performance p
-       LEFT JOIN student_coding_profiles cp ON p.student_id = cp.student_id
-       WHERE p.student_id IN (?)`,
-      [studentIds]
-    );
-    
-    // Create a map for quick lookup
-    const performanceMap = {};
-    performances.forEach(perf => {
-      performanceMap[perf.student_id] = perf;
-    });
-    
-    // Attach performance data to each student
-    rows.forEach(student => {
-      const p = performanceMap[student.student_id];
-      
-      if (p) {
-        const isLeetcodeAccepted = p.leetcode_status === "accepted";
-        const isCodechefAccepted = p.codechef_status === "accepted";
-        const isGfgAccepted = p.geeksforgeeks_status === "accepted";
-        const isHackerrankAccepted = p.hackerrank_status === "accepted";
+
+    // Fetch and attach performance data for each student
+    for (const student of rows) {
+      const [perfRows] = await db.query(
+        `SELECT * FROM student_performance WHERE student_id = ?`,
+        [student.student_id]
+      );
+      const [codingProfiles] = await db.query(
+        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status FROM student_coding_profiles WHERE student_id = ?`,
+        [student.student_id]
+      );
+
+      if (perfRows.length > 0) {
+        const p = perfRows[0];
+        const cp = codingProfiles[0] || {};
+
+        const isLeetcodeAccepted = cp.leetcode_status === "accepted";
+        const isCodechefAccepted = cp.codechef_status === "accepted";
+        const isGfgAccepted = cp.geeksforgeeks_status === "accepted";
+        const isHackerrankAccepted = cp.hackerrank_status === "accepted";
 
         const totalSolved =
           (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -143,56 +91,52 @@ LIMIT ? OFFSET ?`,
             : 0) +
           (isCodechefAccepted ? p.problems_cc : 0);
 
-        student.performance = {
-          combined: {
-            totalSolved: totalSolved,
-            totalContests:
-              (isCodechefAccepted ? p.contests_cc : 0) +
-              (isGfgAccepted ? p.contests_gfg : 0),
-            stars_cc: isCodechefAccepted ? p.stars_cc : 0,
-            badges_hr: isHackerrankAccepted ? p.badges_hr : 0,
-            last_updated: p.last_updated,
+        const combined = {
+          totalSolved: totalSolved,
+          totalContests:
+            (isCodechefAccepted ? p.contests_cc : 0) +
+            (isGfgAccepted ? p.contests_gfg : 0),
+          stars_cc: isCodechefAccepted ? p.stars_cc : 0,
+          badges_hr: isHackerrankAccepted ? p.badges_hr : 0,
+          last_updated: p.last_updated,
+        };
+
+        const platformWise = {
+          leetcode: {
+            easy: isLeetcodeAccepted ? p.easy_lc : 0,
+            medium: isLeetcodeAccepted ? p.medium_lc : 0,
+            hard: isLeetcodeAccepted ? p.hard_lc : 0,
+            contests: isLeetcodeAccepted ? p.contests_lc : 0,
+            badges: isLeetcodeAccepted ? p.badges_lc : 0,
           },
-          platformWise: {
-            leetcode: {
-              easy: isLeetcodeAccepted ? p.easy_lc : 0,
-              medium: isLeetcodeAccepted ? p.medium_lc : 0,
-              hard: isLeetcodeAccepted ? p.hard_lc : 0,
-              contests: isLeetcodeAccepted ? p.contests_lc : 0,
-              badges: isLeetcodeAccepted ? p.badges_lc : 0,
-            },
-            gfg: {
-              school: isGfgAccepted ? p.school_gfg : 0,
-              basic: isGfgAccepted ? p.basic_gfg : 0,
-              easy: isGfgAccepted ? p.easy_gfg : 0,
-              medium: isGfgAccepted ? p.medium_gfg : 0,
-              hard: isGfgAccepted ? p.hard_gfg : 0,
-              contests: isGfgAccepted ? p.contests_gfg : 0,
-            },
-            codechef: {
-              problems: isCodechefAccepted ? p.problems_cc : 0,
-              contests: isCodechefAccepted ? p.contests_cc : 0,
-              stars: isCodechefAccepted ? p.stars_cc : 0,
-              badges: isCodechefAccepted ? p.badges_cc : 0,
-            },
-            hackerrank: {
-              badges: isHackerrankAccepted ? p.stars_hr : 0,
-            },
-          }
+          gfg: {
+            school: isGfgAccepted ? p.school_gfg : 0,
+            basic: isGfgAccepted ? p.basic_gfg : 0,
+            easy: isGfgAccepted ? p.easy_gfg : 0,
+            medium: isGfgAccepted ? p.medium_gfg : 0,
+            hard: isGfgAccepted ? p.hard_gfg : 0,
+            contests: isGfgAccepted ? p.contests_gfg : 0,
+          },
+          codechef: {
+            problems: isCodechefAccepted ? p.problems_cc : 0,
+            contests: isCodechefAccepted ? p.contests_cc : 0,
+            stars: isCodechefAccepted ? p.stars_cc : 0,
+            badges: isCodechefAccepted ? p.badges_cc : 0,
+          },
+          hackerrank: {
+            badges: isHackerrankAccepted ? p.stars_hr : 0,
+          },
+        };
+
+        student.performance = {
+          combined,
+          platformWise,
         };
       }
-    });
+    }
 
-    logger.info(`Fetched overall ranking, page=${page}, count=${rows.length}`);
-    res.json({
-      students: rows,
-      pagination: {
-        page,
-        limit,
-        totalStudents,
-        totalPages
-      }
-    });
+    logger.info(`Fetched overall ranking, count=${rows.length}`);
+    res.json(rows);
   } catch (err) {
     logger.error(`Error fetching overall ranking: ${err.message}`);
     res.status(500).json({ message: "Server error" });
@@ -222,33 +166,13 @@ router.get("/filter", async (req, res) => {
       params.push(year);
     }
     if (req.query.search) {
-      where += " AND (sp.name LIKE ? OR sp.student_id LIKE ?)";
+      where += " AND (sp.name LIKE ? OR sp.roll_number LIKE ?)";
       params.push(`%${req.query.search}%`, `%${req.query.search}%`);
     }
-    
     const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 100, 1000)); // max 1000
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const offset = (page - 1) * limit;
-    
-    // Get total count for pagination
-    const countQuery = `
-      SELECT COUNT(*) as total 
-      FROM student_profiles sp
-      ${where}
-    `;
-    const [countResult] = await db.query(countQuery, params);
-    const totalStudents = countResult[0].total;
-    const totalPages = Math.ceil(totalStudents / limit);
-    
-    // Main query with pagination
     const [rows] = await db.query(
       `SELECT 
-  sp.student_id, 
-  sp.name,
-  sp.dept_code,
-  sp.year,
-  sp.section,
-  sp.overall_rank,
+  sp.*, 
   d.dept_name, 
   ${scoreExpr.replace(/p\.(\w+)/g, (match, metric) => {
     if (metric.includes("_lc"))
@@ -267,56 +191,36 @@ LEFT JOIN student_coding_profiles cp ON sp.student_id = cp.student_id
 JOIN dept d ON sp.dept_code = d.dept_code
 ${where}
 ORDER BY score DESC, sp.student_id ASC
-LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+LIMIT ?`,
+      [...params, limit]
     );
 
-    // Add rank field
-    rows.forEach((student, i) => {
-      student.rank = offset + i + 1;
-    });
-    
-    if (rows.length === 0) {
-      return res.json({
-        students: [],
-        pagination: {
-          page,
-          limit,
-          totalStudents,
-          totalPages
-        }
-      });
+    // Check if all scores are 0
+    const allZero = rows.every((s) => s.score === 0);
+    if (allZero) {
+      rows.sort((a, b) => (a.student_id > b.student_id ? 1 : -1));
     }
-    
-    // Get all student IDs for batch fetching
-    const studentIds = rows.map(student => student.student_id);
-    
-    // Batch fetch performance data
-    const [performances] = await db.query(
-      `SELECT p.*, 
-              cp.leetcode_status, cp.codechef_status, 
-              cp.geeksforgeeks_status, cp.hackerrank_status 
-       FROM student_performance p
-       LEFT JOIN student_coding_profiles cp ON p.student_id = cp.student_id
-       WHERE p.student_id IN (?)`,
-      [studentIds]
-    );
-    
-    // Create a map for quick lookup
-    const performanceMap = {};
-    performances.forEach(perf => {
-      performanceMap[perf.student_id] = perf;
-    });
-    
-    // Attach performance data to each student
-    rows.forEach(student => {
-      const p = performanceMap[student.student_id];
-      
-      if (p) {
-        const isLeetcodeAccepted = p.leetcode_status === "accepted";
-        const isCodechefAccepted = p.codechef_status === "accepted";
-        const isGfgAccepted = p.geeksforgeeks_status === "accepted";
-        const isHackerrankAccepted = p.hackerrank_status === "accepted";
+
+    rows.forEach((s, i) => (s.rank = i + 1));
+    // Attach performance for each student
+    for (const student of rows) {
+      const [perfRows] = await db.query(
+        `SELECT * FROM student_performance WHERE student_id = ?`,
+        [student.student_id]
+      );
+      const [codingProfiles] = await db.query(
+        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status FROM student_coding_profiles WHERE student_id = ?`,
+        [student.student_id]
+      );
+
+      if (perfRows.length > 0) {
+        const p = perfRows[0];
+        const cp = codingProfiles[0] || {};
+
+        const isLeetcodeAccepted = cp.leetcode_status === "accepted";
+        const isCodechefAccepted = cp.codechef_status === "accepted";
+        const isGfgAccepted = cp.geeksforgeeks_status === "accepted";
+        const isHackerrankAccepted = cp.hackerrank_status === "accepted";
 
         const totalSolved =
           (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -329,79 +233,50 @@ LIMIT ? OFFSET ?`,
             : 0) +
           (isCodechefAccepted ? p.problems_cc : 0);
 
-        student.performance = {
-          combined: {
-            totalSolved: totalSolved,
-            totalContests:
-              (isCodechefAccepted ? p.contests_cc : 0) +
-              (isGfgAccepted ? p.contests_gfg : 0),
-            stars_cc: isCodechefAccepted ? p.stars_cc : 0,
-            badges_hr: isHackerrankAccepted ? p.badges_hr : 0,
-            last_updated: p.last_updated,
+        const combined = {
+          totalSolved: totalSolved,
+          totalContests:
+            (isCodechefAccepted ? p.contests_cc : 0) +
+            (isGfgAccepted ? p.contests_gfg : 0),
+          stars_cc: isCodechefAccepted ? p.stars_cc : 0,
+          badges_hr: isHackerrankAccepted ? p.badges_hr : 0,
+          last_updated: p.last_updated,
+        };
+
+        const platformWise = {
+          leetcode: {
+            easy: isLeetcodeAccepted ? p.easy_lc : 0,
+            medium: isLeetcodeAccepted ? p.medium_lc : 0,
+            hard: isLeetcodeAccepted ? p.hard_lc : 0,
           },
-          platformWise: {
-            leetcode: {
-              easy: isLeetcodeAccepted ? p.easy_lc : 0,
-              medium: isLeetcodeAccepted ? p.medium_lc : 0,
-              hard: isLeetcodeAccepted ? p.hard_lc : 0,
-              contests: isLeetcodeAccepted ? p.contests_lc : 0,
-              badges: isLeetcodeAccepted ? p.badges_lc : 0,
-            },
-            gfg: {
-              school: isGfgAccepted ? p.school_gfg : 0,
-              basic: isGfgAccepted ? p.basic_gfg : 0,
-              easy: isGfgAccepted ? p.easy_gfg : 0,
-              medium: isGfgAccepted ? p.medium_gfg : 0,
-              hard: isGfgAccepted ? p.hard_gfg : 0,
-              contests: isGfgAccepted ? p.contests_gfg : 0,
-            },
-            codechef: {
-              problems: isCodechefAccepted ? p.problems_cc : 0,
-              contests: isCodechefAccepted ? p.contests_cc : 0,
-              stars: isCodechefAccepted ? p.stars_cc : 0,
-              badges: isCodechefAccepted ? p.badges_cc : 0,
-            },
-            hackerrank: {
-              badges: isHackerrankAccepted ? p.stars_hr : 0,
-            },
-          }
+          gfg: {
+            school: isGfgAccepted ? p.school_gfg : 0,
+            basic: isGfgAccepted ? p.basic_gfg : 0,
+            easy: isGfgAccepted ? p.easy_gfg : 0,
+            medium: isGfgAccepted ? p.medium_gfg : 0,
+            hard: isGfgAccepted ? p.hard_gfg : 0,
+            contests: isGfgAccepted ? p.contests_gfg : 0,
+          },
+          codechef: {
+            problems: isCodechefAccepted ? p.problems_cc : 0,
+            contests: isCodechefAccepted ? p.contests_cc : 0,
+            stars: isCodechefAccepted ? p.stars_cc : 0,
+          },
+          hackerrank: {
+            badges: isHackerrankAccepted ? p.stars_hr : 0,
+          },
+        };
+
+        student.performance = {
+          combined,
+          platformWise,
         };
       }
-    });
-    
-    logger.info(`Fetched filtered ranking, page=${page}, count=${rows.length}`);
-    res.json({
-      students: rows,
-      pagination: {
-        page,
-        limit,
-        totalStudents,
-        totalPages
-      }
-    });
+    }
+    logger.info(`Fetched filtered ranking, count=${rows.length}`);
+    res.json(rows);
   } catch (err) {
     logger.error(`Error fetching filtered ranking: ${err.message}`);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// POST /ranking/update-all - Trigger a full ranking update
-router.post("/update-all", async (req, res) => {
-  logger.info("Manual ranking update triggered");
-  try {
-    // Start the update process without waiting for it to complete
-    updateAllRankings()
-      .then(result => {
-        logger.info(`Ranking update completed: ${result.studentsUpdated} students updated`);
-      })
-      .catch(err => {
-        logger.error(`Ranking update failed: ${err.message}`);
-      });
-    
-    // Immediately respond to the client
-    res.json({ message: "Ranking update started in the background" });
-  } catch (err) {
-    logger.error(`Error starting ranking update: ${err.message}`);
     res.status(500).json({ message: "Server error" });
   }
 });
