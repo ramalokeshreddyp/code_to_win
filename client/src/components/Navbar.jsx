@@ -61,14 +61,15 @@ const Navbar = ({ toggleSidebar }) => {
                   ({currentUser?.role})
                 </span>
               </div>
-              {currentUser?.role === "student" && (<div
-                onClick={logout}
-                className="flex items-center gap-2 on hover:text-blue-800 p-2 cursor-pointer"
-              >
-                <FiLogOut />
-                Logout
-              </div>)}
-              
+              {currentUser?.role === "student" && (
+                <div
+                  onClick={logout}
+                  className="flex items-center gap-2 on hover:text-blue-800 p-2 cursor-pointer"
+                >
+                  <FiLogOut />
+                  Logout
+                </div>
+              )}
             </div>
           )}
           {/* Mobile Hamburger */}
@@ -83,13 +84,21 @@ const Navbar = ({ toggleSidebar }) => {
             ) : (
               <>
                 <NotificationDropdown />
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 text-xl text-gray-700 hover:text-blue-800 focus:outline-none"
-                >
-                  <FiMenu />
-                </button>
-                
+                {currentUser?.role === "student" ? (
+                  <div
+                    onClick={logout}
+                    className="flex items-center gap-2 on hover:text-blue-800 p-2 cursor-pointer"
+                  >
+                    <FiLogOut />
+                  </div>
+                ) : (
+                  <button
+                    onClick={toggleSidebar}
+                    className="p-2 text-xl text-gray-700 hover:text-blue-800 focus:outline-none"
+                  >
+                    <FiMenu />
+                  </button>
+                )}
               </>
             )}
           </div>
