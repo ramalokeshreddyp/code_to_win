@@ -28,6 +28,15 @@ router.get("/profile", async (req, res) => {
       "SELECT COUNT(*) AS total_students FROM student_profiles"
     );
 
+    //Get total students in each department
+    const [students_per_dept] = await db.query(
+      `SELECT d.dept_name, COUNT(sp.student_id) AS student_count
+       FROM dept d
+       LEFT JOIN student_profiles sp ON d.dept_code = sp.dept_code
+       GROUP BY d.dept_code, d.dept_name`
+    );
+    profile.students_per_dept = students_per_dept;
+
     // Get total faculty
     const [[{ total_faculty }]] = await db.query(
       "SELECT COUNT(*) AS total_faculty FROM faculty_profiles"
@@ -38,31 +47,13 @@ router.get("/profile", async (req, res) => {
       "SELECT COUNT(*) AS total_hod FROM hod_profiles"
     );
 
-    // Add performance data structure (empty for admin but consistent with other roles)
-    const performance = {
-      combined: {
-        totalSolved: 0,
-        totalContests: 0,
-        stars_cc: 0,
-        badges_hr: 0,
-        last_updated: null,
-      },
-      platformWise: {
-        leetcode: { easy: 0, medium: 0, hard: 0, contests: 0, badges: 0 },
-        gfg: { school: 0, basic: 0, easy: 0, medium: 0, hard: 0, contests: 0 },
-        codechef: { problems: 0, contests: 0, stars: 0, badges: 0 },
-        hackerrank: { badges: 0 },
-      },
-    };
-
     logger.info(`Admin profile fetched for userId: ${userId}`);
     res.json({
       ...profile,
       total_students,
+      students_per_dept,
       total_faculty,
       total_hod,
-      performance,
-      coding_profiles: null,
     });
   } catch (err) {
     logger.error(
@@ -304,7 +295,7 @@ router.post("/update-student", async (req, res) => {
     // Update student_profiles table
     const profileFields = [];
     const profileValues = [];
-    
+
     if (name) {
       profileFields.push("name = ?");
       profileValues.push(name);
@@ -325,23 +316,25 @@ router.post("/update-student", async (req, res) => {
       profileFields.push("degree = ?");
       profileValues.push(degree);
     }
-    
+
     if (profileFields.length > 0) {
       profileValues.push(userId);
       await db.query(
-        `UPDATE student_profiles SET ${profileFields.join(", ")} WHERE student_id = ?`,
+        `UPDATE student_profiles SET ${profileFields.join(
+          ", "
+        )} WHERE student_id = ?`,
         profileValues
       );
     }
-    
+
     // Update users table for email
     if (email) {
-      await db.query(
-        "UPDATE users SET email = ? WHERE user_id = ?",
-        [email, userId]
-      );
+      await db.query("UPDATE users SET email = ? WHERE user_id = ?", [
+        email,
+        userId,
+      ]);
     }
-    
+
     logger.info(`Student updated by admin: userId=${userId}`);
     res.json({ message: "Student updated successfully" });
   } catch (err) {
