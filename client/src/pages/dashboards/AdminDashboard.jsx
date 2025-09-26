@@ -75,6 +75,80 @@ const metricToPlatform = {
 
 const platformOrder = ["LeetCode", "GeeksforGeeks", "CodeChef", "HackerRank"];
 
+// Verification Toggle Component for SA07
+function VerificationToggle() {
+  const [verificationRequired, setVerificationRequired] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchVerificationStatus();
+  }, []);
+
+  const fetchVerificationStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/settings?userId=SA07");
+      const data = await res.json();
+      setVerificationRequired(data.verification_required);
+    } catch (err) {
+      console.error("Failed to fetch verification status");
+    }
+    setLoading(false);
+  };
+
+  const toggleVerification = async () => {
+    try {
+      const res = await fetch("/api/admin/toggle-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: "SA07",
+          enabled: !verificationRequired,
+        }),
+      });
+
+      if (res.ok) {
+        setVerificationRequired(!verificationRequired);
+        toast.success(
+          `Verification ${!verificationRequired ? "enabled" : "disabled"}`
+        );
+      } else {
+        toast.error("Failed to update verification setting");
+      }
+    } catch (err) {
+      toast.error("Error updating verification setting");
+    }
+  };
+
+  if (loading) return <div className="text-center py-4">Loading...</div>;
+
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-yellow-800">
+            Faculty Verification
+          </h3>
+          <p className="text-sm text-yellow-700">
+            {verificationRequired
+              ? "Students need faculty approval before scraping starts"
+              : "Students profiles are auto-approved and scraping starts immediately"}
+          </p>
+        </div>
+        <button
+          onClick={toggleVerification}
+          className={`px-4 py-2 rounded font-medium transition ${
+            verificationRequired
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : "bg-red-600 hover:bg-red-700 text-white"
+          }`}
+        >
+          {verificationRequired ? "Turn OFF" : "Turn ON"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard() {
   const { currentUser, logout } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -84,8 +158,12 @@ function AdminDashboard() {
   const [userMgmtTab, setUserMgmtTab] = useState("addBranch");
   const [changedMetrics, setChangedMetrics] = useState(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [customFilters, setCustomFilters] = useState({ dept: '', year: '', section: '' });
-  const [deptWiseFilter, setDeptWiseFilter] = useState('');
+  const [customFilters, setCustomFilters] = useState({
+    dept: "",
+    year: "",
+    section: "",
+  });
+  const [deptWiseFilter, setDeptWiseFilter] = useState("");
   const { depts, years, sections } = useMeta();
 
   const menuItems = [
@@ -182,40 +260,44 @@ function AdminDashboard() {
 
   const handleDownload = async (type) => {
     try {
-      toast.loading('Preparing download...');
+      toast.loading("Preparing download...");
       let url = `/api/download/${type}`;
-      
-      if (type === 'custom') {
+
+      if (type === "custom") {
         const params = new URLSearchParams(customFilters).toString();
         url += `?${params}`;
-      } else if (type === 'department-wise') {
+      } else if (type === "department-wise") {
         if (!deptWiseFilter) {
           toast.dismiss();
-          toast.error('Please select a department first.');
+          toast.error("Please select a department first.");
           return;
         }
         url += `?dept=${deptWiseFilter}`;
       }
-      
+
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Download failed');
-      
+      if (!response.ok) throw new Error("Download failed");
+
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `${type}_data.xlsx`;
+      a.download =
+        response.headers
+          .get("Content-Disposition")
+          ?.split("filename=")[1]
+          ?.replace(/"/g, "") || `${type}_data.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(downloadUrl);
-      
+
       toast.dismiss();
-      toast.success('Download completed!');
+      toast.success("Download completed!");
     } catch (error) {
       toast.dismiss();
-      toast.error('Download failed. Please try again.');
-      console.error('Download error:', error);
+      toast.error("Download failed. Please try again.");
+      console.error("Download error:", error);
     }
   };
 
@@ -279,14 +361,16 @@ function AdminDashboard() {
                 <h2 className="text-xl font-semibold mb-4">Manage Students</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   {currentUser.students_per_dept.map((dept) => (
-
                     <div className="bg-white p-4 rounded-lg shadow">
-                      <h2 className="text-gray-500 text-lg">{dept.dept_name}</h2>
+                      <h2 className="text-gray-500 text-lg">
+                        {dept.dept_name}
+                      </h2>
                       <p className="text-xl font-bold">
                         {dept.student_count || 0}
                       </p>
                     </div>
-                  ))}</div>
+                  ))}
+                </div>
                 <p className="text-gray-500 mb-4">
                   View and modify student records across all departments.
                 </p>
@@ -305,8 +389,16 @@ function AdminDashboard() {
             {selectedTab === "GradingSystem" && (
               <div className="bg-white px-4 py-8">
                 <h1 className="text-2xl font-bold text-center mb-6">
-                  Grading Configuration
+                  System Configuration
                 </h1>
+
+                {/* Verification Toggle - SA07 Only */}
+                {currentUser.user_id === "SA07" && <VerificationToggle />}
+
+                <h2 className="text-xl font-semibold mb-4 mt-8">
+                  Grading Configuration
+                </h2>
+
                 {loading ? (
                   <div className="text-center py-8">
                     Loading grading config...
@@ -393,7 +485,10 @@ function AdminDashboard() {
                   Export various types of data from the system.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <button onClick={() => handleDownload('all-students')} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition">
+                  <button
+                    onClick={() => handleDownload("all-students")}
+                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition"
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <FiDownload className="text-blue-600" />
                       <h3 className="font-semibold">All Students Data</h3>
@@ -402,8 +497,11 @@ function AdminDashboard() {
                       Same format as generate students excel
                     </p>
                   </button>
-                  
-                  <button onClick={() => handleDownload('faculty')} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition">
+
+                  <button
+                    onClick={() => handleDownload("faculty")}
+                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition"
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <FiDownload className="text-green-600" />
                       <h3 className="font-semibold">Faculty Data</h3>
@@ -412,8 +510,11 @@ function AdminDashboard() {
                       All faculty + department-wise sheets
                     </p>
                   </button>
-                  
-                  <button onClick={() => handleDownload('hod')} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition">
+
+                  <button
+                    onClick={() => handleDownload("hod")}
+                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition"
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <FiDownload className="text-purple-600" />
                       <h3 className="font-semibold">HOD Data</h3>
@@ -422,61 +523,98 @@ function AdminDashboard() {
                       Head of Department information
                     </p>
                   </button>
-                  
+
                   <div className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-3 mb-3">
                       <FiDownload className="text-red-600" />
                       <h3 className="font-semibold">Department Wise</h3>
                     </div>
                     <div className="space-y-2 mb-3">
-                      <select 
-                        value={deptWiseFilter} 
+                      <select
+                        value={deptWiseFilter}
                         onChange={(e) => setDeptWiseFilter(e.target.value)}
                         className="w-full p-2 border rounded text-sm"
                       >
                         <option value="">Select Department</option>
-                        {depts.map(d => <option key={d.dept_code} value={d.dept_code}>{d.dept_name}</option>)}
+                        {depts.map((d) => (
+                          <option key={d.dept_code} value={d.dept_code}>
+                            {d.dept_name}
+                          </option>
+                        ))}
                       </select>
                     </div>
-                    <button onClick={() => handleDownload('department-wise')} className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition">
+                    <button
+                      onClick={() => handleDownload("department-wise")}
+                      className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
+                    >
                       Download Department Data
                     </button>
                   </div>
-                  
+
                   <div className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-3 mb-3">
                       <FiDownload className="text-teal-600" />
                       <h3 className="font-semibold">Custom Report</h3>
                     </div>
                     <div className="space-y-2 mb-3">
-                      <select 
-                        value={customFilters.dept} 
-                        onChange={(e) => setCustomFilters(prev => ({...prev, dept: e.target.value}))}
+                      <select
+                        value={customFilters.dept}
+                        onChange={(e) =>
+                          setCustomFilters((prev) => ({
+                            ...prev,
+                            dept: e.target.value,
+                          }))
+                        }
                         className="w-full p-2 border rounded text-sm"
                       >
                         <option value="">All Departments</option>
-                        {depts.map(d => <option key={d.dept_code} value={d.dept_code}>{d.dept_name}</option>)}
+                        {depts.map((d) => (
+                          <option key={d.dept_code} value={d.dept_code}>
+                            {d.dept_name}
+                          </option>
+                        ))}
                       </select>
                       <div className="flex gap-2">
-                        <select 
-                          value={customFilters.year} 
-                          onChange={(e) => setCustomFilters(prev => ({...prev, year: e.target.value}))}
+                        <select
+                          value={customFilters.year}
+                          onChange={(e) =>
+                            setCustomFilters((prev) => ({
+                              ...prev,
+                              year: e.target.value,
+                            }))
+                          }
                           className="flex-1 p-2 border rounded text-sm"
                         >
                           <option value="">All Years</option>
-                          {years.map(y => <option key={y} value={y}>{y}</option>)}
+                          {years.map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
                         </select>
-                        <select 
-                          value={customFilters.section} 
-                          onChange={(e) => setCustomFilters(prev => ({...prev, section: e.target.value}))}
+                        <select
+                          value={customFilters.section}
+                          onChange={(e) =>
+                            setCustomFilters((prev) => ({
+                              ...prev,
+                              section: e.target.value,
+                            }))
+                          }
                           className="flex-1 p-2 border rounded text-sm"
                         >
                           <option value="">All Sections</option>
-                          {sections.map(s => <option key={s} value={s}>{s}</option>)}
+                          {sections.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
-                    <button onClick={() => handleDownload('custom')} className="w-full bg-teal-600 text-white py-2 rounded hover:bg-teal-700 transition">
+                    <button
+                      onClick={() => handleDownload("custom")}
+                      className="w-full bg-teal-600 text-white py-2 rounded hover:bg-teal-700 transition"
+                    >
                       Generate Custom Report
                     </button>
                   </div>

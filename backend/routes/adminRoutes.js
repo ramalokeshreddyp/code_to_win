@@ -397,4 +397,45 @@ router.delete("/hods/:id", async (req, res) => {
   }
 });
 
+// GET /admin/settings - Get system settings (SA07 only)
+router.get("/settings", async (req, res) => {
+  const { userId } = req.query;
+  if (userId !== 'SA07') {
+    return res.status(403).json({ message: "Access denied" });
+  }
+  
+  try {
+    const [settings] = await db.query(
+      "SELECT * FROM system_settings WHERE setting_key = 'verification_required'"
+    );
+    const verificationRequired = settings.length > 0 ? settings[0].setting_value === 'true' : true;
+    
+    res.json({ verification_required: verificationRequired });
+  } catch (err) {
+    logger.error(`Error fetching settings: ${err.message}`);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// POST /admin/toggle-verification - Toggle verification requirement (SA07 only)
+router.post("/toggle-verification", async (req, res) => {
+  const { userId, enabled } = req.body;
+  if (userId !== 'SA07') {
+    return res.status(403).json({ message: "Access denied" });
+  }
+  
+  try {
+    await db.query(
+      "INSERT INTO system_settings (setting_key, setting_value, updated_by) VALUES ('verification_required', ?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_by = ?",
+      [enabled ? 'true' : 'false', userId, enabled ? 'true' : 'false', userId]
+    );
+    
+    logger.info(`Verification requirement ${enabled ? 'enabled' : 'disabled'} by ${userId}`);
+    res.json({ message: `Verification ${enabled ? 'enabled' : 'disabled'}` });
+  } catch (err) {
+    logger.error(`Error toggling verification: ${err.message}`);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

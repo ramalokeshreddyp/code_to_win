@@ -115,10 +115,10 @@ router.get("/students", async (req, res) => {
         const p = perfRows[0];
         const cp = codingProfiles[0] || {};
 
-        const isLeetcodeAccepted = cp.leetcode_status === "accepted";
-        const isCodechefAccepted = cp.codechef_status === "accepted";
-        const isGfgAccepted = cp.geeksforgeeks_status === "accepted";
-        const isHackerrankAccepted = cp.hackerrank_status === "accepted";
+        const isLeetcodeAccepted = cp.leetcode_id;
+        const isCodechefAccepted = cp.codechef_id;
+        const isGfgAccepted = cp.geeksforgeeks_id;
+        const isHackerrankAccepted = cp.hackerrank_id;
 
         const totalSolved =
           (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -180,40 +180,60 @@ router.get("/students", async (req, res) => {
   }
 });
 
+
+
 // GET /faculty/coding-profile-requests?dept=CSE&year=3&section=A
 router.get("/coding-profile-requests", async (req, res) => {
   const { dept, year, section } = req.query;
-  logger.info(
-    `Fetching coding profile requests: dept=${dept}, year=${year}, section=${section}`
-  );
   try {
     const [requests] = await db.query(
-      `SELECT 
-        scp.*, 
-        sp.name, 
-        sp.year, 
-        sp.section, 
-        d.dept_name
+      `SELECT scp.*, sp.name, sp.year, sp.section, d.dept_name
       FROM student_coding_profiles scp
       JOIN student_profiles sp ON scp.student_id = sp.student_id
       JOIN dept d ON sp.dept_code = d.dept_code
       WHERE sp.dept_code = ? AND sp.year = ? AND sp.section = ?
-        AND (
-          scp.leetcode_status = 'pending'
-          OR scp.codechef_status = 'pending'
-          OR scp.geeksforgeeks_status = 'pending'
-          OR scp.hackerrank_status = 'pending'
-          OR scp.leetcode_status = 'suspended'
-          OR scp.codechef_status = 'suspended'
-          OR scp.geeksforgeeks_status = 'suspended'
-          OR scp.hackerrank_status = 'suspended'
-        )`,
+        AND (scp.leetcode_status = 'pending' OR scp.codechef_status = 'pending'
+             OR scp.geeksforgeeks_status = 'pending' OR scp.hackerrank_status = 'pending')`,
       [dept, year, section]
     );
-    logger.info(`Fetched ${requests.length} coding profile requests`);
     res.json(requests);
   } catch (err) {
     logger.error(`Error fetching coding profile requests: ${err.message}`);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// POST /faculty/verify-coding-profile
+router.post("/verify-coding-profile", async (req, res) => {
+  const { student_id, platform, action, faculty_id } = req.body;
+  try {
+    const status = action === "accept" ? "accepted" : "rejected";
+    const verified = action === "accept" ? 1 : 0;
+    
+    await db.query(
+      `UPDATE student_coding_profiles
+       SET ${platform}_status = ?, ${platform}_verified = ?, verified_by = ?
+       WHERE student_id = ?`,
+      [status, verified, faculty_id, student_id]
+    );
+
+    res.json({ message: `Profile ${platform} ${status}` });
+
+    // If accepted, start scraping
+    if (action === "accept") {
+      const [rows] = await db.query(
+        `SELECT ${platform}_id FROM student_coding_profiles WHERE student_id = ?`,
+        [student_id]
+      );
+      const username = rows[0] && rows[0][`${platform}_id`];
+      if (username) {
+        scrapeAndUpdatePerformance(student_id, platform, username).catch(
+          (err) => logger.error(`Scraping error: ${err.message}`)
+        );
+      }
+    }
+  } catch (err) {
+    logger.error(`Error verifying coding profile: ${err.message}`);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -222,58 +242,48 @@ router.get("/coding-profile-requests", async (req, res) => {
 router.get("/notifications", async (req, res) => {
   const { userId } = req.query;
   try {
-    // Get faculty's assigned section
+    // Check if verification is required
+    const [settings] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
+    );
+    const verificationRequired = settings.length > 0 ? settings[0].setting_value === 'true' : true;
+    
+    if (!verificationRequired) {
+      return res.json([]);
+    }
+    
     const [assignment] = await db.query(
       "SELECT year, section FROM faculty_section_assignment WHERE faculty_id = ?",
       [userId]
     );
+    if (assignment.length === 0) return res.json([]);
 
-    if (assignment.length === 0) {
-      return res.json([]);
-    }
-
-    const { year, section } = assignment[0];
-
-    // Get faculty's department
     const [faculty] = await db.query(
       "SELECT dept_code FROM faculty_profiles WHERE faculty_id = ?",
       [userId]
     );
+    if (faculty.length === 0) return res.json([]);
 
-    if (faculty.length === 0) {
-      return res.json([]);
-    }
-
-    const dept_code = faculty[0].dept_code;
-
-    // Count pending requests
     const [pendingCount] = await db.query(
       `SELECT COUNT(*) as count FROM student_coding_profiles scp
        JOIN student_profiles sp ON scp.student_id = sp.student_id
        WHERE sp.dept_code = ? AND sp.year = ? AND sp.section = ?
-       AND (scp.leetcode_status = 'pending' OR scp.codechef_status = 'pending' 
-            OR scp.geeksforgeeks_status = 'pending' OR scp.hackerrank_status = 'pending'
-            OR scp.leetcode_status = 'suspended' OR scp.codechef_status = 'suspended'
-            OR scp.geeksforgeeks_status = 'suspended' OR scp.hackerrank_status = 'suspended')`,
-      [dept_code, year, section]
+       AND (scp.leetcode_status = 'pending' OR scp.codechef_status = 'pending'
+            OR scp.geeksforgeeks_status = 'pending' OR scp.hackerrank_status = 'pending')`,
+      [faculty[0].dept_code, assignment[0].year, assignment[0].section]
     );
 
     const count = pendingCount[0].count;
-
     if (count > 0) {
-      res.json([
-        {
-          id: "pending-requests",
-          title: "Pending Profile Requests",
-          message: `You have ${count} coding profile request${
-            count > 1 ? "s" : ""
-          } to review`,
-          status: "pending",
-          read: false,
-          created_at: new Date().toISOString(),
-          count: count,
-        },
-      ]);
+      res.json([{
+        id: "pending-requests",
+        title: "Pending Profile Requests",
+        message: `You have ${count} coding profile request${count > 1 ? "s" : ""} to review`,
+        status: "pending",
+        read: false,
+        created_at: new Date().toISOString(),
+        count: count,
+      }]);
     } else {
       res.json([]);
     }
@@ -283,65 +293,6 @@ router.get("/notifications", async (req, res) => {
   }
 });
 
-// POST /faculty/verify-coding-profile
-router.post("/verify-coding-profile", async (req, res) => {
-  const { student_id, platform, action, faculty_id, comment } = req.body;
-  logger.info(
-    `Verify coding profile: student_id=${student_id}, platform=${platform}, action=${action}, faculty_id=${faculty_id}`
-  );
-  try {
-    let status = action === "accept" ? "accepted" : "rejected";
-    let is_verified = action === "accept" ? 1 : 0;
-    const statusField = `${platform}_status`;
-    const verifiedField = `${platform}_verified`;
 
-    // Update verification status
-    await db.query(
-      `UPDATE student_coding_profiles
-       SET ${statusField} = ?, ${verifiedField} = ?, verified_by = ?
-       WHERE student_id = ?`,
-      [status, is_verified, faculty_id, student_id]
-    );
-
-    // Create notification for student
-    const title = `${
-      platform.charAt(0).toUpperCase() + platform.slice(1)
-    } Profile ${status.charAt(0).toUpperCase() + status.slice(1)}`;
-    const message = `Your ${platform} coding profile has been ${status} by faculty.`;
-
-    await db.query(
-      `INSERT INTO notifications (user_id, title, message, status, created_at) VALUES (?, ?, ?, ?, NOW())`,
-      [student_id, title, message, status]
-    );
-
-    logger.info(`Profile ${platform} ${status} for student_id=${student_id}`);
-
-    // Respond immediately
-    res.json({ message: `Profile ${platform} ${status}` });
-
-    // If accepted, scrape and update performance in background
-    if (action === "accept") {
-      const [rows] = await db.query(
-        `SELECT ${platform}_id FROM student_coding_profiles WHERE student_id = ?`,
-        [student_id]
-      );
-      const username = rows[0] && rows[0][`${platform}_id`];
-      if (username) {
-        // Run in background, don't await
-        scrapeAndUpdatePerformance(student_id, platform, username).catch(
-          (err) =>
-            logger.error(
-              `Scraping error for student_id=${student_id}, platform=${platform}: ${err.message}`
-            )
-        );
-      }
-    }
-  } catch (err) {
-    logger.error(
-      `Error verifying coding profile for student_id=${student_id}, platform=${platform}: ${err.message}`
-    );
-    res.status(500).json({ message: "Server error" });
-  }
-});
 
 module.exports = router;
