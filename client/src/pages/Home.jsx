@@ -78,11 +78,11 @@ function Home() {
         </div>
       </div>
       <section className="relative w-[95%] xl:w-3/4 mx-auto  mb-20 z-20" data-aos="fade">
-        <img
+        {/* <img
           src="/owl.gif"
           alt=""
           className="absolute h-32 md:h-40  right-3 md:right-5 md:-top-32 -top-24 w-auto"
-        />
+        /> */}
         <div className="bg-yellow-50 py-5 px-5 lg:px-28 flex items-center gap-5 rounded-t-2xl border-b-2 border-b-gray-200 text-center">
           <img src="/trophy.png" alt="" />
           <p className="font-bold text-base lg:text-xl">
