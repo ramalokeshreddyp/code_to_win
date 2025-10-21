@@ -47,6 +47,11 @@ router.get("/profile", async (req, res) => {
       "SELECT COUNT(*) AS total_hod FROM hod_profiles"
     );
 
+    // Get visitor statistics
+    const [[visitorStats]] = await db.query(
+      "SELECT COALESCE(SUM(visitor_count), 0) as total_visits, COALESCE(SUM(unique_visitors), 0) as total_unique_visitors FROM visitor_stats"
+    );
+
     logger.info(`Admin profile fetched for userId: ${userId}`);
     res.json({
       ...profile,
@@ -54,6 +59,10 @@ router.get("/profile", async (req, res) => {
       students_per_dept,
       total_faculty,
       total_hod,
+      visitor_stats: {
+        total_visits: visitorStats?.total_visits || 0,
+        total_unique_visitors: visitorStats?.total_unique_visitors || 0
+      }
     });
   } catch (err) {
     logger.error(

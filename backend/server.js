@@ -6,12 +6,16 @@ const cron = require("node-cron");
 const {
   updateAllStudentsPerformance,
 } = require("./scrapers/scrapeAndUpdatePerformance");
+const visitorTracker = require("./middleware/visitorTracker");
 const app = express();
 app.use(cors());
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Visitor tracking middleware
+app.use(visitorTracker);
 
 // Log every request globally
 app.use((req, res, next) => {
