@@ -3,7 +3,6 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
-const appendToExcel = require("../appendToExcel");
 const nodemailer = require("nodemailer");
 const { logger } = require("../utils");
 const {
@@ -196,22 +195,6 @@ router.post("/register", async (req, res) => {
       [dept]
     );
     const dept_name = deptRows.length > 0 ? deptRows[0].dept_name : null;
-    // Append to Excel after DB commit
-    await appendToExcel({
-      cleanedStdId,
-      name,
-      email,
-      gender,
-      degree,
-      dept_name,
-      year,
-      section,
-      leetcode,
-      codechef,
-      hackerrank,
-      geeksforgeeks,
-    });
-    logger.info("[EXCEL] Student added to excel successfully");
 
     await sendNewRegistrationMail(email, name, cleanedStdId, stdId);
 
