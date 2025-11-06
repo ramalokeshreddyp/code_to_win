@@ -8,6 +8,7 @@ const { logger } = require("../utils");
 const {
   scrapeAndUpdatePerformance,
 } = require("../scrapers/scrapeAndUpdatePerformance");
+const { normalizeUserId, isValidUserId } = require("../utils/userValidation");
 
 require("dotenv").config();
 
@@ -61,13 +62,25 @@ const sendNewRegistrationMail = async (email, name, userId, password) => {
 
 // Login a user
 router.post("/login", async (req, res) => {
-  const { userId, password, role } = req.body;
+  const { userId: rawUserId, password, role } = req.body;
+  
+  // Normalize userId
+  const userId = normalizeUserId(rawUserId);
+  
   logger.info(`Login attempt: userId=${userId}, role=${role}`);
+  
   // Input validation
   if (!userId || !password || !role) {
     logger.warn("Missing userId, password, or role in login");
     return res.status(400).json({
       message: "User Id, password and role are required",
+    });
+  }
+  
+  if (!isValidUserId(userId)) {
+    logger.warn(`Invalid userId format: ${rawUserId}`);
+    return res.status(400).json({
+      message: "Invalid User ID format",
     });
   }
   try {
@@ -121,7 +134,7 @@ router.post("/login", async (req, res) => {
 //register a user
 router.post("/register", async (req, res) => {
   const {
-    stdId,
+    stdId: rawStdId,
     name,
     email,
     gender,
@@ -134,7 +147,17 @@ router.post("/register", async (req, res) => {
     geeksforgeeks,
     codechef,
   } = req.body.formData;
- const cleanedStdId = stdId.replace(/\s+/g, '');
+  
+  // Normalize student ID
+  const cleanedStdId = normalizeUserId(rawStdId);
+  
+  // Validate student ID
+  if (!isValidUserId(cleanedStdId)) {
+    logger.warn(`Invalid student ID format: ${rawStdId}`);
+    return res.status(400).json({
+      message: "Invalid Student ID format",
+    });
+  }
 
   logger.info(`Add student request: ${JSON.stringify(req.body.formData)}`);
   const connection = await db.getConnection(); // Use a connection from the pool
@@ -196,7 +219,7 @@ router.post("/register", async (req, res) => {
     );
     const dept_name = deptRows.length > 0 ? deptRows[0].dept_name : null;
 
-    await sendNewRegistrationMail(email, name, cleanedStdId, stdId);
+    await sendNewRegistrationMail(email, name, cleanedStdId, cleanedStdId);
 
     // After inserting into student_coding_profiles table:
     if (hackerrank) {
