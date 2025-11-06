@@ -182,9 +182,9 @@ const Register = () => {
                           type="text"
                           name="stdId"
                           value={formData.stdId}
-                              onChange={handleChange}
-                              placeholder="22A91AXXXX"
-                              className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
+                          onChange={(e) => setFormData({...formData, stdId: e.target.value.trim().replace(/\s+/g, '').toUpperCase()})}
+                          placeholder="22A91AXXXX"
+                          className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
                         />
                       </div>
                       <div className="mb-4 w-full">
