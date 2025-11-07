@@ -179,6 +179,82 @@ The scoring system is configurable through the database `grading_system` table. 
 3. **Platform Monitoring**: Oversee scraping operations and system health
 4. **Data Export**: Generate comprehensive reports and analytics
 
+## 🔄 System Workflow Diagram
+
+```mermaid
+flowchart TD
+    A[Student Registration] --> B[Profile Setup]
+    B --> C[Add Coding Platform Usernames]
+    C --> D[Faculty/Admin Verification]
+    D --> E{Approved?}
+    E -->|Yes| F[Dashboard Access]
+    E -->|No| G[Profile Rejected]
+    G --> C
+    
+    F --> H[View Performance Stats]
+    F --> I[Manual Profile Refresh]
+    
+    J[Faculty Login] --> K[Department Management]
+    K --> L[Student Verification]
+    K --> M[Bulk Import Students]
+    K --> N[Generate Reports]
+    
+    O[HOD Login] --> P[College-wide Analytics]
+    P --> Q[Faculty Management]
+    P --> R[Department Comparisons]
+    
+    S[Admin Login] --> T[System Configuration]
+    T --> U[User Management]
+    T --> V[Platform Monitoring]
+    
+    W[Web Scrapers] --> X[Weekly Data Collection]
+    X --> Y[Performance Updates]
+    Y --> Z[Daily Ranking Calculation]
+    Z --> AA[Database Updates]
+    
+    BB[Cron Jobs] --> W
+    BB --> CC[Visitor Cleanup]
+    BB --> DD[System Maintenance]
+    
+    style A fill:#e1f5fe
+    style F fill:#c8e6c9
+    style J fill:#fff3e0
+    style O fill:#fce4ec
+    style S fill:#f3e5f5
+    style W fill:#fff8e1
+```
+
+### Data Flow Architecture
+
+```mermaid
+flowchart LR
+    A[Frontend React App] --> B[Vite Proxy]
+    B --> C[Express API Server]
+    C --> D[MySQL Database]
+    
+    E[Web Scrapers] --> F[LeetCode API]
+    E --> G[CodeChef Scraper]
+    E --> H[GeeksforGeeks Scraper]
+    E --> I[HackerRank Scraper]
+    
+    E --> C
+    
+    J[Mobile App] --> C
+    
+    K[Cron Scheduler] --> E
+    K --> L[Ranking Calculator]
+    L --> D
+    
+    M[Winston Logger] --> N[Log Files]
+    C --> M
+    
+    style A fill:#e3f2fd
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style J fill:#f3e5f5
+```
+
 ## 🛠️ API Endpoints
 
 ### Authentication
