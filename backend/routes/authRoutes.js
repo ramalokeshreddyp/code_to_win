@@ -77,7 +77,7 @@ router.post("/login", async (req, res) => {
     });
   }
   
-  if (!isValidUserId(userId)) {
+  if (!isValidUserId(userId, role)) {
     logger.warn(`Invalid userId format: ${rawUserId}`);
     return res.status(400).json({
       message: "Invalid User ID format",
@@ -152,7 +152,7 @@ router.post("/register", async (req, res) => {
   const cleanedStdId = normalizeUserId(rawStdId);
   
   // Validate student ID
-  if (!isValidUserId(cleanedStdId)) {
+  if (!isValidUserId(cleanedStdId, 'student')) {
     logger.warn(`Invalid student ID format: ${rawStdId}`);
     return res.status(400).json({
       message: "Invalid Student ID format",
