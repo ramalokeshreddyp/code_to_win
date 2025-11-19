@@ -19,6 +19,7 @@ import { useMeta } from "../../context/MetaContext";
 import toast from "react-hot-toast";
 
 // Lazy-loaded components
+const AdminAnalyticsDashboard = lazy(() => import("./AdminAnalyticsDashboard"));
 const RankingTable = lazy(() => import("../../components/Ranking"));
 const ViewProfile = lazy(() => import("../../components/ViewProfile"));
 const ContactRequests = lazy(() =>
@@ -152,7 +153,7 @@ function VerificationToggle() {
 function AdminDashboard() {
   const { currentUser, logout } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedTab, setSelectedTab] = useState("StudentRanking");
+  const [selectedTab, setSelectedTab] = useState("Analytics");
   const [grading, setGrading] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userMgmtTab, setUserMgmtTab] = useState("addBranch");
@@ -167,6 +168,7 @@ function AdminDashboard() {
   const { depts, years, sections } = useMeta();
 
   const menuItems = [
+    { key: "Analytics", label: "Analytics Dashboard", icon: <FiBarChart2 /> },
     { key: "StudentRanking", label: "Student Ranking", icon: <FiBarChart2 /> },
     { key: "ManageStudents", label: "Manage Students", icon: <FiUsers /> },
     { key: "FacultyList", label: "Faculty List", icon: <FiUserCheck /> },
@@ -327,10 +329,10 @@ function AdminDashboard() {
         <div className="flex-1 lg:ml-64">
           <div className="p-4 md:p-6 space-y-4">
             {/* Admin Info */}
-            <UserProfile user={currentUser} />
+            {/* <UserProfile user={currentUser} /> */}
 
             {/* Section Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="bg-white p-4 rounded-lg shadow">
                 <h2 className="text-gray-500 text-sm">Total Students</h2>
                 <p className="text-2xl font-bold">
@@ -362,7 +364,15 @@ function AdminDashboard() {
                   {currentUser.visitor_stats?.live_visitors || 0}
                 </p>
               </div>
-            </div>
+            </div> */}
+
+            {/* Analytics Dashboard */}
+            {selectedTab === "Analytics" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminAnalyticsDashboard />
+              </Suspense>
+            )}
+
             {/* Student Ranking */}
             {selectedTab === "StudentRanking" && (
               <Suspense fallback={<LoadingSpinner />}>

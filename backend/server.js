@@ -30,6 +30,7 @@ app.use("/api/student", require("./routes/studentRoutes"));
 app.use("/api/faculty", require("./routes/facultyRoutes"));
 app.use("/api/hod", require("./routes/hodRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/admin/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/ranking", require("./routes/rankingRoutes"));
 app.use("/api/meta", require("./routes/metaRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
