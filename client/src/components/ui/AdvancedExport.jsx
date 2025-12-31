@@ -102,6 +102,7 @@ const AdvancedExport = ({
   const [facultyData, setFacultyData] = useState([]);
   const [hodData, setHODData] = useState([]);
   const [loadingMap, setLoadingMap] = useState({ faculty: false, hod: false });
+  const [splitBySheets, setSplitBySheets] = useState(false);
 
   // Dynamically get current GROUPS based on type
   const activeGroups = useMemo(() => {
@@ -205,7 +206,31 @@ const AdvancedExport = ({
         ? filenamePrefix
         : `${filenamePrefix.split("_")[0]}_${exportType}`; // e.g. Admin_faculty_export
 
-    exportCustomExcel(currentData, fieldsToExport, prefix);
+    if (exportType === "students" && splitBySheets) {
+      const getYearOrdinal = (year) => {
+        const y = parseInt(year);
+        if (y === 1) return "1st";
+        if (y === 2) return "2nd";
+        if (y === 3) return "3rd";
+        if (y === 4) return "4th";
+        return year;
+      };
+
+      const groupedData = currentData.reduce((acc, student) => {
+        const dept = student.dept_name || student.dept_code || "Unknown";
+        const year = getYearOrdinal(student.year);
+        const section = student.section || "NoSec";
+        const sheetName = `${dept}-${year}-${section}SEC`;
+
+        if (!acc[sheetName]) acc[sheetName] = [];
+        acc[sheetName].push(student);
+        return acc;
+      }, {});
+
+      exportCustomExcel(groupedData, fieldsToExport, prefix);
+    } else {
+      exportCustomExcel(currentData, fieldsToExport, prefix);
+    }
   };
 
   /* Helper to toggle fields/groups matching new structure */
@@ -234,119 +259,134 @@ const AdvancedExport = ({
 
   return (
     <div className="space-y-6">
-      {/* Type Selector Tabs */}
-      <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
-        {["students", "faculty", "hod"].map((type) =>
-          type !== "students" && !fetchFacultyData && !fetchHODData ? null : (
-            <button
-              key={type}
-              onClick={() => handleTypeChange(type)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
-                exportType === type
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {type}
-            </button>
-          )
-        )}
-      </div>
-
-      {/* Filters (Only for Students currently) */}
-      {exportType === "students" && (
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-4 w-full md:w-auto">
-            {availableDepts.length > 1 && (
-              <select
-                value={filters.dept}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, dept: e.target.value }))
-                }
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
-              >
-                <option value="">All Departments</option>
-                {availableDepts.map((d) => (
-                  <option key={d.dept_code} value={d.dept_code}>
-                    {d.dept_name}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {availableYears.length > 1 && (
-              <select
-                value={filters.year}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, year: e.target.value }))
-                }
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
-              >
-                <option value="">All Years</option>
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {availableSections.length > 1 && (
-              <select
-                value={filters.section}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, section: e.target.value }))
-                }
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
-              >
-                <option value="">All Sections</option>
-                {availableSections.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div className="text-sm text-gray-500 font-medium">
-            Showing {currentData.length} Records
-          </div>
-        </div>
-      )}
-
-      {/* Status Message for other types */}
-      {exportType !== "students" && (
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-blue-800 text-sm">
-          {loadingMap[exportType]
-            ? "Fetching data..."
-            : `Ready to export ${currentData.length} records.`}
-        </div>
-      )}
-
-      {/* Main Export Action Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 className="text-lg font-bold text-gray-800">
-            Export Configuration
-          </h3>
-          <p className="text-sm text-gray-500">
-            Select fields for {exportType} export
+          <h2 className="text-xl font-bold text-gray-800">
+            Advanced Data Export
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Configure fields and filters for your report
           </p>
         </div>
 
-        <button
-          onClick={handleExport}
-          disabled={
-            selectedFields.size === 0 ||
-            currentData.length === 0 ||
-            loadingMap[exportType]
-          }
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <FiDownload />
-          Export {exportType} Data ({selectedFields.size} cols)
-        </button>
+        {/* Type Selector Tabs */}
+        <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
+          {["students", "faculty", "hod"].map((type) =>
+            type !== "students" && !fetchFacultyData && !fetchHODData ? null : (
+              <button
+                key={type}
+                onClick={() => handleTypeChange(type)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
+                  exportType === type
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {type}
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Toolbar: Filters & Export Action */}
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          {exportType === "students" && (
+            <>
+              {availableDepts.length > 1 && (
+                <select
+                  value={filters.dept}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, dept: e.target.value }))
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
+                >
+                  <option value="">All Departments</option>
+                  {availableDepts.map((d) => (
+                    <option key={d.dept_code} value={d.dept_code}>
+                      {d.dept_name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {availableYears.length > 1 && (
+                <select
+                  value={filters.year}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, year: e.target.value }))
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
+                >
+                  <option value="">All Years</option>
+                  {availableYears.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {availableSections.length > 1 && (
+                <select
+                  value={filters.section}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, section: e.target.value }))
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
+                >
+                  <option value="">All Sections</option>
+                  {availableSections.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
+          )}
+
+          {exportType !== "students" && (
+            <div className="text-sm text-blue-600 font-medium">
+              {loadingMap[exportType]
+                ? "Fetching data..."
+                : `Exporting ${exportType} list`}
+            </div>
+          )}
+
+          <div className="h-6 w-px bg-gray-200 hidden lg:block"></div>
+
+          <div className="text-sm text-gray-500 font-medium whitespace-nowrap">
+            {currentData.length} Records Found
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto justify-end">
+          {exportType === "students" && (
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-blue-600 transition-colors whitespace-nowrap">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={splitBySheets}
+                onChange={(e) => setSplitBySheets(e.target.checked)}
+              />
+              Split by Sheets
+            </label>
+          )}
+          <button
+            onClick={handleExport}
+            disabled={
+              selectedFields.size === 0 ||
+              currentData.length === 0 ||
+              loadingMap[exportType]
+            }
+            className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            <FiDownload />
+            Export Data ({selectedFields.size} cols)
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

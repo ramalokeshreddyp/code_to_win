@@ -560,15 +560,6 @@ function AdminDashboard() {
             {/* Downloads / Export Data */}
             {selectedTab === "ExportData" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-gray-800">
-                    Advanced Data Export
-                  </h2>
-                  <p className="text-gray-500 text-sm">
-                    Download comprehensive reports for all students.
-                  </p>
-                </div>
-
                 {exportLoading ? (
                   <div className="py-20 flex justify-center">
                     <LoadingSpinner />

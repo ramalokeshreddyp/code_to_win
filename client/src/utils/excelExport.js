@@ -62,48 +62,57 @@ export const exportStudentsToExcel = (students, filename = "students") => {
 };
 
 export const exportCustomExcel = (
-  students,
+  data, // Array of students OR Object { sheetName: students[] }
   fieldsConfig,
   filenamePrefix = "custom_export"
 ) => {
-  const excelData = students.map((student, i) => {
-    const row = { "S.No": i + 1 };
+  const wb = XLSX.utils.book_new();
 
-    fieldsConfig.forEach((field) => {
-      let value = getNestedValue(student, field.key);
+  const isMultiSheet = !Array.isArray(data);
+  const sheetsMap = isMultiSheet ? data : { "Custom Export": data };
 
-      // Additional fallback check for performance metrics if directly accessing student object failed
-      if (value === undefined && student.performance) {
-        value = getNestedValue(student.performance, field.key);
-      }
+  Object.entries(sheetsMap).forEach(([sheetName, students]) => {
+    // Skip empty data for sheets if multi-sheet
+    if (isMultiSheet && (!students || students.length === 0)) return;
 
-      // Special handling for Badges List which is an array of objects
-      if (field.key.includes("badgesList") && Array.isArray(value)) {
-        value = value.map((b) => `${b.name}: ${b.stars}★`).join(", ");
-      }
+    const excelData = students.map((student, i) => {
+      const row = { "S.No": i + 1 };
 
-      row[field.label] = value !== undefined && value !== null ? value : "-";
+      fieldsConfig.forEach((field) => {
+        let value = getNestedValue(student, field.key);
+
+        if (value === undefined && student.performance) {
+          value = getNestedValue(student.performance, field.key);
+        }
+
+        if (field.key.includes("badgesList") && Array.isArray(value)) {
+          value = value.map((b) => `${b.name}: ${b.stars}★`).join(", ");
+        }
+
+        row[field.label] = value !== undefined && value !== null ? value : "-";
+      });
+
+      return row;
     });
 
-    return row;
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Auto-size columns
+    const colWidths = [{ wch: 5 }]; // S.No
+    fieldsConfig.forEach((field) => {
+      const key = field.label;
+      const maxLength = Math.max(
+        key.length,
+        ...excelData.map((row) => String(row[key] || "").length)
+      );
+      colWidths.push({ wch: Math.min(maxLength + 2, 40) });
+    });
+    ws["!cols"] = colWidths;
+
+    // Sheet name must be <= 31 chars and unique
+    const safeSheetName = sheetName.substring(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
   });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(excelData);
-
-  // Auto-size columns
-  const colWidths = [{ wch: 5 }]; // S.No
-  fieldsConfig.forEach((field) => {
-    const key = field.label;
-    const maxLength = Math.max(
-      key.length,
-      ...excelData.map((row) => String(row[key] || "").length)
-    );
-    colWidths.push({ wch: Math.min(maxLength + 2, 40) });
-  });
-  ws["!cols"] = colWidths;
-
-  XLSX.utils.book_append_sheet(wb, ws, "Custom Export");
 
   const timestamp = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `${filenamePrefix}_${timestamp}.xlsx`);
