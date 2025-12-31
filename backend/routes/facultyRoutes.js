@@ -209,6 +209,12 @@ router.get("/students", async (req, res) => {
             repos: isGithubAccepted ? p.repos_gh : 0,
             contributions: isGithubAccepted ? p.contributions_gh : 0,
           },
+          achievements: {
+            certifications: p.certification_count || 0,
+            hackathon_winners: p.hackathon_winner_count || 0,
+            hackathon_participation: p.hackathon_participation_count || 0,
+            workshops: p.workshop_count || 0,
+          },
         };
 
         student.performance = {

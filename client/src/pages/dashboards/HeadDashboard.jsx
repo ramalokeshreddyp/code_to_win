@@ -18,20 +18,24 @@ import StatsCard from "../../components/ui/StatsCard";
 import { exportStudentsToExcel } from "../../utils/excelExport";
 import dayjs from "dayjs";
 import {
-  FiBarChart2,
-  FiUsers,
-  FiUserPlus,
-  FiDownload,
-  FiClock,
-  FiHome,
-  FiLayers,
   FiGrid,
+  FiHome,
+  FiUsers,
+  FiDownload,
+  FiTrendingUp,
+  FiUserPlus,
+  FiClock,
+  FiLayers,
 } from "react-icons/fi";
 
 // Lazy-loaded components
 const RankingTable = lazy(() => import("../../components/Ranking"));
 const ViewProfile = lazy(() => import("../../components/ViewProfile"));
 const StudentTable = lazy(() => import("../../components/ui/StudentTable"));
+const AdvancedExport = lazy(() => import("../../components/ui/AdvancedExport"));
+const LifecycleManagement = lazy(() =>
+  import("../../components/ui/LifecycleManagement")
+);
 
 // Student Management Tab Component
 function StudentManagementTab({
@@ -472,6 +476,8 @@ function HeadDashboard() {
     { key: "Overview", label: "Overview", icon: <FiHome /> },
     { key: "StudentRanking", label: "Student Management", icon: <FiUsers /> },
     { key: "FacultyManagment", label: "Faculty Management", icon: <FiGrid /> },
+    { key: "ExportData", label: "Export Data", icon: <FiDownload /> },
+    { key: "Lifecycle", label: "Student Lifecycle", icon: <FiTrendingUp /> },
     { key: "More", label: "More Actions", icon: <FiUserPlus /> },
   ];
 
@@ -641,6 +647,31 @@ function HeadDashboard() {
                 facultyList={facultyList}
                 refreshFacultyList={fetchFaculty}
               />
+            )}
+
+            {selectedTab === "ExportData" && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Advanced Data Export
+                  </h2>
+                  <p className="text-gray-500 text-sm">
+                    Download comprehensive reports for your department.
+                  </p>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdvancedExport
+                    students={filteredStudents}
+                    filenamePrefix={`HOD_Export_${currentUser?.dept_code}`}
+                  />
+                </Suspense>
+              </div>
+            )}
+
+            {selectedTab === "Lifecycle" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <LifecycleManagement fixedDept={currentUser?.dept_code} />
+              </Suspense>
             )}
 
             {selectedTab === "More" && <MoreActionsTab />}

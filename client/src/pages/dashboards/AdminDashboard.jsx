@@ -8,6 +8,7 @@ import DashboardSidebar from "../../components/DashboardSidebar";
 import {
   FiMenu,
   FiUsers,
+  FiTrendingUp,
   FiUserCheck,
   FiSettings,
   FiUserPlus,
@@ -53,6 +54,10 @@ const AddIndividualStudentModel = lazy(() =>
 );
 const AddBranchModal = lazy(() =>
   import("../../components/Modals").then((m) => ({ default: m.AddBranchModal }))
+);
+const AdvancedExport = lazy(() => import("../../components/ui/AdvancedExport"));
+const LifecycleManagement = lazy(() =>
+  import("../../components/ui/LifecycleManagement")
 );
 
 const metricToPlatform = {
@@ -172,6 +177,8 @@ function AdminDashboard() {
   const [selectedTab, setSelectedTab] = useState("Analytics");
   const [grading, setGrading] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [allStudents, setAllStudents] = useState([]);
   const [userMgmtTab, setUserMgmtTab] = useState("addBranch");
   const [changedMetrics, setChangedMetrics] = useState(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -192,7 +199,8 @@ function AdminDashboard() {
     { key: "GradingSystem", label: "Grading System", icon: <FiSettings /> },
     { key: "UserManagment", label: "User Management", icon: <FiUserPlus /> },
     { key: "ContactRequests", label: "Contact Requests", icon: <FiMail /> },
-    { key: "Downloads", label: "Downloads", icon: <FiDownload /> },
+    { key: "Lifecycle", label: "Student Lifecycle", icon: <FiTrendingUp /> },
+    { key: "ExportData", label: "Export Data", icon: <FiDownload /> },
   ];
 
   // Helper to make metric names readable
@@ -222,6 +230,25 @@ function AdminDashboard() {
     hackathon_participation_count: "Hackathon - Participation",
     workshop_count: "Workshops",
   };
+
+  useEffect(() => {
+    if (selectedTab === "ExportData" && allStudents.length === 0) {
+      const fetchStudents = async () => {
+        setExportLoading(true);
+        try {
+          const res = await fetch("/api/admin/students");
+          const data = await res.json();
+          setAllStudents(data);
+        } catch (err) {
+          console.error("Failed to fetch students for export", err);
+          toast.error("Failed to load student data for export");
+        }
+        setExportLoading(false);
+      };
+      fetchStudents();
+    }
+  }, [selectedTab, allStudents.length]);
+
   useEffect(() => {
     const fetchGrading = async () => {
       setLoading(true);
@@ -526,149 +553,48 @@ function AdminDashboard() {
               </Suspense>
             )}
 
-            {/* Downloads */}
-            {selectedTab === "Downloads" && (
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold mb-4">Download Data</h2>
-                <p className="text-gray-500 mb-6">
-                  Export various types of data from the system.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <button
-                    onClick={() => handleDownload("all-students")}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <FiDownload className="text-blue-600" />
-                      <h3 className="font-semibold">All Students Data</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Same format as generate students excel
-                    </p>
-                  </button>
-
-                  <button
-                    onClick={() => handleDownload("faculty")}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <FiDownload className="text-green-600" />
-                      <h3 className="font-semibold">Faculty Data</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      All faculty + department-wise sheets
-                    </p>
-                  </button>
-
-                  <button
-                    onClick={() => handleDownload("hod")}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <FiDownload className="text-purple-600" />
-                      <h3 className="font-semibold">HOD Data</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Head of Department information
-                    </p>
-                  </button>
-
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3 mb-3">
-                      <FiDownload className="text-red-600" />
-                      <h3 className="font-semibold">Department Wise</h3>
-                    </div>
-                    <div className="space-y-2 mb-3">
-                      <select
-                        value={deptWiseFilter}
-                        onChange={(e) => setDeptWiseFilter(e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
-                      >
-                        <option value="">Select Department</option>
-                        {depts.map((d) => (
-                          <option key={d.dept_code} value={d.dept_code}>
-                            {d.dept_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={() => handleDownload("department-wise")}
-                      className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
-                    >
-                      Download Department Data
-                    </button>
-                  </div>
-
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3 mb-3">
-                      <FiDownload className="text-teal-600" />
-                      <h3 className="font-semibold">Custom Report</h3>
-                    </div>
-                    <div className="space-y-2 mb-3">
-                      <select
-                        value={customFilters.dept}
-                        onChange={(e) =>
-                          setCustomFilters((prev) => ({
-                            ...prev,
-                            dept: e.target.value,
-                          }))
-                        }
-                        className="w-full p-2 border rounded text-sm"
-                      >
-                        <option value="">All Departments</option>
-                        {depts.map((d) => (
-                          <option key={d.dept_code} value={d.dept_code}>
-                            {d.dept_name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="flex gap-2">
-                        <select
-                          value={customFilters.year}
-                          onChange={(e) =>
-                            setCustomFilters((prev) => ({
-                              ...prev,
-                              year: e.target.value,
-                            }))
-                          }
-                          className="flex-1 p-2 border rounded text-sm"
-                        >
-                          <option value="">All Years</option>
-                          {years.map((y) => (
-                            <option key={y} value={y}>
-                              {y}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={customFilters.section}
-                          onChange={(e) =>
-                            setCustomFilters((prev) => ({
-                              ...prev,
-                              section: e.target.value,
-                            }))
-                          }
-                          className="flex-1 p-2 border rounded text-sm"
-                        >
-                          <option value="">All Sections</option>
-                          {sections.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDownload("custom")}
-                      className="w-full bg-teal-600 text-white py-2 rounded hover:bg-teal-700 transition"
-                    >
-                      Generate Custom Report
-                    </button>
-                  </div>
+            {/* Downloads / Export Data */}
+            {selectedTab === "ExportData" && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Advanced Data Export
+                  </h2>
+                  <p className="text-gray-500 text-sm">
+                    Download comprehensive reports for all students.
+                  </p>
                 </div>
+
+                {exportLoading ? (
+                  <div className="py-20 flex justify-center">
+                    <LoadingSpinner />
+                  </div>
+                ) : (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdvancedExport
+                      students={allStudents}
+                      filenamePrefix={`Admin_Export_All`}
+                      fetchFacultyData={async () => {
+                        const res = await fetch("/api/admin/faculty"); // Use Admin endpoint with assignments
+                        if (!res.ok) throw new Error("Failed");
+                        return res.json();
+                      }}
+                      fetchHODData={async () => {
+                        const res = await fetch("/api/admin/hods");
+                        if (!res.ok) throw new Error("Failed");
+                        return res.json();
+                      }}
+                    />
+                  </Suspense>
+                )}
               </div>
+            )}
+
+            {/* Lifecycle Management */}
+            {selectedTab === "Lifecycle" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <LifecycleManagement />
+              </Suspense>
             )}
 
             {/* User Management */}

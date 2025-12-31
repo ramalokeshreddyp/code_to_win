@@ -108,6 +108,7 @@ router.get("/students", async (req, res) => {
       FROM student_profiles sp
       JOIN users u ON sp.student_id = u.user_id
       JOIN dept d ON sp.dept_code = d.dept_code
+      WHERE sp.status = 'active'
       ORDER BY sp.name ASC
     `;
     const [students] = await db.query(query);
@@ -185,6 +186,12 @@ router.get("/students", async (req, res) => {
             repos: isGithubAccepted ? p.repos_gh : 0,
             contributions: isGithubAccepted ? p.contributions_gh : 0,
           },
+          achievements: {
+            certifications: p.certification_count || 0,
+            hackathon_winners: p.hackathon_winner_count || 0,
+            hackathon_participation: p.hackathon_participation_count || 0,
+            workshops: p.workshop_count || 0,
+          },
         };
 
         student.performance = {
@@ -202,15 +209,19 @@ router.get("/students", async (req, res) => {
   }
 });
 
-// GET /hod/faculty?dept=CSE
+// GET /admin/faculty?dept=CSE
 router.get("/faculty", async (req, res) => {
   const { dept } = req.query;
   logger.info(`Fetching faculty: dept=${dept}`);
   try {
     let query = `
-      SELECT fp.*, u.email 
+      SELECT 
+        fp.*, 
+        u.email,
+        GROUP_CONCAT(CONCAT(fsa.year, '-', fsa.section) SEPARATOR ', ') as assignments
       FROM faculty_profiles fp
       JOIN users u ON fp.faculty_id = u.user_id
+      LEFT JOIN faculty_section_assignment fsa ON fp.faculty_id = fsa.faculty_id
       WHERE 1=1
     `;
     const params = [];
@@ -218,6 +229,9 @@ router.get("/faculty", async (req, res) => {
       query += " AND fp.dept_code = ?";
       params.push(dept);
     }
+
+    query += " GROUP BY fp.faculty_id";
+
     const [faculty] = await db.query(query, params);
     logger.info(`Fetched ${faculty.length} faculty`);
     res.json(faculty);

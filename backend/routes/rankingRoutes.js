@@ -41,6 +41,7 @@ FROM student_profiles sp
 JOIN student_performance p ON sp.student_id = p.student_id
 LEFT JOIN student_coding_profiles cp ON sp.student_id = cp.student_id
 JOIN dept d ON sp.dept_code = d.dept_code
+WHERE sp.status = 'active'
 ORDER BY score DESC, sp.student_id ASC
 LIMIT ?`,
       [limit]
@@ -162,7 +163,7 @@ router.get("/filter", async (req, res) => {
   );
   try {
     const scoreExpr = await getScoreExpression();
-    let where = "WHERE 1=1";
+    let where = "WHERE sp.status = 'active'";
     const params = [];
     if (dept) {
       where += " AND sp.dept_code = ?";

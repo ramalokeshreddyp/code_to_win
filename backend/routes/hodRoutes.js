@@ -93,7 +93,7 @@ router.get("/students", async (req, res) => {
       FROM student_profiles sp
       JOIN users u ON sp.student_id = u.user_id
       JOIN dept d ON sp.dept_code = d.dept_code
-      WHERE 1=1
+      WHERE sp.status = 'active'
     `;
     const params = [];
     if (dept) {
@@ -183,6 +183,12 @@ router.get("/students", async (req, res) => {
           github: {
             repos: isGithubAccepted ? p.repos_gh : 0,
             contributions: isGithubAccepted ? p.contributions_gh : 0,
+          },
+          achievements: {
+            certifications: p.certification_count || 0,
+            hackathon_winners: p.hackathon_winner_count || 0,
+            hackathon_participation: p.hackathon_participation_count || 0,
+            workshops: p.workshop_count || 0,
           },
         };
 

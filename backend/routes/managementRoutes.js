@@ -767,4 +767,79 @@ router.post("/check-score", async (req, res) => {
   }
 });
 
+// POST /api/management/promote-batch
+router.post("/promote-batch", async (req, res) => {
+  const { dept, fromYear } = req.body;
+  logger.info(`Bulk promotion request: dept=${dept}, fromYear=${fromYear}`);
+
+  if (!dept || !fromYear) {
+    return res
+      .status(400)
+      .json({ message: "Department and Year are required" });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      `UPDATE student_profiles 
+       SET year = year + 1 
+       WHERE dept_code = ? AND year = ? AND status = 'active'`,
+      [dept, fromYear]
+    );
+
+    await connection.commit();
+    logger.info(
+      `Promoted ${result.affectedRows} students from Year ${fromYear} in ${dept}`
+    );
+    res.json({
+      message: `Successfully promoted ${result.affectedRows} students.`,
+      affectedRows: result.affectedRows,
+    });
+  } catch (err) {
+    await connection.rollback();
+    logger.error(`Error in bulk promotion: ${err.message}`);
+    res.status(500).json({ message: "Server error", error: err.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// POST /api/management/graduate-batch
+router.post("/graduate-batch", async (req, res) => {
+  const { dept } = req.body;
+  logger.info(`Bulk graduation request: dept=${dept}`);
+
+  if (!dept) {
+    return res.status(400).json({ message: "Department is required" });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Mark Year 4 as graduated
+    const [result] = await connection.query(
+      `UPDATE student_profiles 
+       SET status = 'graduated' 
+       WHERE dept_code = ? AND year = 4 AND status = 'active'`,
+      [dept]
+    );
+
+    await connection.commit();
+    logger.info(`Graduated ${result.affectedRows} students in ${dept}`);
+    res.json({
+      message: `Successfully graduated ${result.affectedRows} students.`,
+      affectedRows: result.affectedRows,
+    });
+  } catch (err) {
+    await connection.rollback();
+    logger.error(`Error in bulk graduation: ${err.message}`);
+    res.status(500).json({ message: "Server error", error: err.message });
+  } finally {
+    connection.release();
+  }
+});
+
 module.exports = router;

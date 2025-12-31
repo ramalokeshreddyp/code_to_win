@@ -45,6 +45,7 @@ const BulkImportWithCP = lazy(() =>
 const FacultyApprovals = lazy(() =>
   import("../../components/ui/FacultyApprovals")
 );
+const AdvancedExport = lazy(() => import("../../components/ui/AdvancedExport"));
 
 function FacultyDashboard() {
   const { currentUser, logout } = useAuth();
@@ -71,6 +72,7 @@ function FacultyDashboard() {
       label: "Approvals & Requests",
       icon: <FiCheckSquare />,
     },
+    { key: "ExportData", label: "Export Data", icon: <FiDownload /> },
     { key: "MoreActions", label: "More Actions", icon: <FiUserPlus /> },
   ];
 
@@ -383,6 +385,26 @@ function FacultyDashboard() {
                           />
                         </Suspense>
                       </div>
+                    </div>
+                  )}
+
+                  {selectedTab === "ExportData" && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                      <div className="mb-6">
+                        <h2 className="text-xl font-bold text-gray-800">
+                          Advanced Data Export
+                        </h2>
+                        <p className="text-gray-500 text-sm">
+                          Select specific fields and download custom reports for
+                          your students.
+                        </p>
+                      </div>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <AdvancedExport
+                          students={students}
+                          filenamePrefix={`Faculty_Export_${currentUser?.dept_code}`}
+                        />
+                      </Suspense>
                     </div>
                   )}
 
