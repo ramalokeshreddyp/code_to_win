@@ -512,10 +512,10 @@ router.post("/batch-configs", async (req, res) => {
   }
 });
 
-// GET /admin/admins - List all administrators (SA07 only)
+// GET /admin/admins - List all administrators (SA07/ADMIN only)
 router.get("/admins", async (req, res) => {
   const { userId } = req.query;
-  if (userId !== "SA07") {
+  if (userId !== "SA07" && userId !== "ADMIN") {
     return res.status(403).json({ message: "Access denied" });
   }
 
@@ -534,10 +534,10 @@ router.get("/admins", async (req, res) => {
   }
 });
 
-// POST /admin/admins - Create a new administrator (SA07 only)
+// POST /admin/admins - Create a new administrator (SA07/ADMIN only)
 router.post("/admins", async (req, res) => {
   const { superAdminId, adminId, name, email, password } = req.body;
-  if (superAdminId !== "SA07") {
+  if (superAdminId !== "SA07" && superAdminId !== "ADMIN") {
     return res.status(403).json({ message: "Access denied" });
   }
 
@@ -578,53 +578,35 @@ router.post("/admins", async (req, res) => {
   }
 });
 
-// PUT /admin/admins/:id - Update an administrator (SA07 only)
+// PUT /admin/admins/:id - Update an administrator (SA07/ADMIN only)
 router.put("/admins/:id", async (req, res) => {
+  const { id } = req.params;
   const { superAdminId, name, email, is_active } = req.body;
-  const { id: adminId } = req.params;
 
-  if (superAdminId !== "SA07") {
+  if (superAdminId !== "SA07" && superAdminId !== "ADMIN") {
     return res.status(403).json({ message: "Access denied" });
   }
 
-  logger.info(`Updating admin: ${adminId}`);
+  logger.info(`Updating administrator: ${id}`);
   const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // Update admin_profiles
-    if (name) {
-      await connection.query(
-        "UPDATE admin_profiles SET name = ? WHERE admin_id = ?",
-        [name, adminId]
-      );
-    }
+    // 1. Update users table
+    await connection.query(
+      "UPDATE users SET email = ?, is_active = ? WHERE user_id = ?",
+      [email, is_active ? 1 : 0, id]
+    );
 
-    // Update users table (email and is_active)
-    if (email !== undefined || is_active !== undefined) {
-      const updates = [];
-      const params = [];
-      if (email) {
-        updates.push("email = ?");
-        params.push(email);
-      }
-      if (is_active !== undefined) {
-        updates.push("is_active = ?");
-        params.push(is_active);
-      }
-
-      if (updates.length > 0) {
-        params.push(adminId);
-        await connection.query(
-          `UPDATE users SET ${updates.join(", ")} WHERE user_id = ?`,
-          params
-        );
-      }
-    }
+    // 2. Update admin_profiles table
+    await connection.query(
+      "UPDATE admin_profiles SET name = ? WHERE admin_id = ?",
+      [name, id]
+    );
 
     await connection.commit();
-    logger.info(`Admin ${adminId} updated successfully`);
+    logger.info(`Administrator ${id} updated successfully`);
     res.json({ message: "Administrator updated successfully" });
   } catch (err) {
     await connection.rollback();
@@ -635,37 +617,34 @@ router.put("/admins/:id", async (req, res) => {
   }
 });
 
-// DELETE /admin/admins/:id - Delete an administrator (SA07 only)
+// DELETE /admin/admins/:id - Delete an administrator (SA07/ADMIN only)
 router.delete("/admins/:id", async (req, res) => {
+  const { id } = req.params;
   const { superAdminId } = req.body;
-  const { id: adminId } = req.params;
 
-  if (superAdminId !== "SA07") {
+  if (superAdminId !== "SA07" && superAdminId !== "ADMIN") {
     return res.status(403).json({ message: "Access denied" });
   }
 
-  if (adminId === "SA07") {
-    return res
-      .status(400)
-      .json({ message: "Cannot delete the super-admin account" });
+  // Prevent self-deletion and SA07/ADMIN deletion
+  if (id === "SA07" || id === "ADMIN") {
+    return res.status(400).json({ message: "Cannot delete super-admin" });
   }
 
-  logger.info(`Deleting admin: ${adminId}`);
+  logger.info(`Deleting administrator: ${id}`);
   const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // Delete from admin_profiles
+    // Delete from both tables
     await connection.query("DELETE FROM admin_profiles WHERE admin_id = ?", [
-      adminId,
+      id,
     ]);
-
-    // Delete from users table
-    await connection.query("DELETE FROM users WHERE user_id = ?", [adminId]);
+    await connection.query("DELETE FROM users WHERE user_id = ?", [id]);
 
     await connection.commit();
-    logger.info(`Admin ${adminId} deleted successfully`);
+    logger.info(`Administrator ${id} deleted successfully`);
     res.json({ message: "Administrator deleted successfully" });
   } catch (err) {
     await connection.rollback();
