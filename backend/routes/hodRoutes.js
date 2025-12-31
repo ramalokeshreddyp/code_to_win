@@ -202,7 +202,7 @@ router.get("/faculty", async (req, res) => {
       SELECT fp.*,
              fsa.year, fsa.section
       FROM faculty_profiles fp
-      JOIN faculty_section_assignment fsa ON fp.faculty_id = fsa.faculty_id
+      LEFT JOIN faculty_section_assignment fsa ON fp.faculty_id = fsa.faculty_id
       WHERE 1=1
     `;
 
@@ -213,8 +213,29 @@ router.get("/faculty", async (req, res) => {
       params.push(dept);
     }
 
-    const [faculty] = await db.query(query, params);
-    logger.info(`Fetched ${faculty.length} faculty`);
+    const [rows] = await db.query(query, params);
+
+    // Aggregate assignments by faculty_id
+    const facultyMap = new Map();
+    rows.forEach((row) => {
+      if (!facultyMap.has(row.faculty_id)) {
+        facultyMap.set(row.faculty_id, {
+          faculty_id: row.faculty_id,
+          name: row.name,
+          dept_code: row.dept_code,
+          assignments: [],
+        });
+      }
+      if (row.year && row.section) {
+        facultyMap.get(row.faculty_id).assignments.push({
+          year: row.year,
+          section: row.section,
+        });
+      }
+    });
+
+    const faculty = Array.from(facultyMap.values());
+    logger.info(`Fetched ${faculty.length} faculty with assignments`);
     res.json(faculty);
   } catch (err) {
     logger.error(`Error fetching faculty: ${err.message}`);
@@ -224,25 +245,77 @@ router.get("/faculty", async (req, res) => {
 
 // POST /hod/assign-faculty
 router.post("/assign-faculty", async (req, res) => {
-  const { faculty_id, dept_code, year, section } = req.body;
+  const { faculty_id, dept_code, assignments } = req.body;
   logger.info(
-    `Assign faculty: faculty_id=${faculty_id}, dept_code=${dept_code}, year=${year}, section=${section}`
+    `Assign faculty: faculty_id=${faculty_id}, dept_code=${dept_code}, assignments=${JSON.stringify(
+      assignments
+    )}`
   );
-  if (!faculty_id || !dept_code || !year || !section) {
-    logger.warn("Missing fields in assign-faculty");
-    return res.status(400).json({ message: "All fields are required" });
+
+  // Validate input
+  if (
+    !faculty_id ||
+    !dept_code ||
+    !assignments ||
+    !Array.isArray(assignments)
+  ) {
+    logger.warn("Missing or invalid fields in assign-faculty");
+    return res
+      .status(400)
+      .json({
+        message: "Faculty ID, department, and assignments array are required",
+      });
   }
+
+  if (assignments.length === 0) {
+    logger.warn("Empty assignments array");
+    return res
+      .status(400)
+      .json({ message: "At least one assignment is required" });
+  }
+
+  // Validate each assignment
+  for (const assignment of assignments) {
+    if (!assignment.year || !assignment.section) {
+      logger.warn("Invalid assignment object");
+      return res
+        .status(400)
+        .json({ message: "Each assignment must have year and section" });
+    }
+  }
+
+  const connection = await db.getConnection();
   try {
-    // Insert assignment
-    await db.query(
-      "UPDATE faculty_section_assignment SET year=?, section=? WHERE faculty_id=?",
-      [year, section, faculty_id]
+    await connection.beginTransaction();
+
+    // Delete existing assignments for this faculty
+    await connection.query(
+      "DELETE FROM faculty_section_assignment WHERE faculty_id = ?",
+      [faculty_id]
     );
-    logger.info(`Faculty assigned successfully: faculty_id=${faculty_id}`);
-    res.json({ message: "Faculty assigned successfully" });
+
+    // Insert new assignments
+    for (const assignment of assignments) {
+      await connection.query(
+        "INSERT INTO faculty_section_assignment (faculty_id, year, section) VALUES (?, ?, ?)",
+        [faculty_id, assignment.year, assignment.section]
+      );
+    }
+
+    await connection.commit();
+    logger.info(
+      `Faculty assigned successfully: faculty_id=${faculty_id}, ${assignments.length} assignments`
+    );
+    res.json({
+      message: "Faculty assigned successfully",
+      assignmentCount: assignments.length,
+    });
   } catch (err) {
+    await connection.rollback();
     logger.error(`Error assigning faculty: ${err.message}`);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
+  } finally {
+    connection.release();
   }
 });
 

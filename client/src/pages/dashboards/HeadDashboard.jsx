@@ -74,7 +74,12 @@ function StudentManagementTab({
           </p>
         </div>
         <button
-          onClick={() => exportStudentsToExcel(filteredStudents, `hod_students_${currentUser?.dept_code}`)}
+          onClick={() =>
+            exportStudentsToExcel(
+              filteredStudents,
+              `hod_students_${currentUser?.dept_code}`
+            )
+          }
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
         >
           <FiDownload />
@@ -148,36 +153,93 @@ function StudentManagementTab({
 }
 
 // Faculty Management Tab
-function FacultyManagementTab({ years, sections, facultyList }) {
+function FacultyManagementTab({
+  years,
+  sections,
+  facultyList,
+  refreshFacultyList,
+}) {
   const [selectedFaculty, setSelectedFaculty] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [selectedSection, setSelectedSection] = useState("");
+  const [assignments, setAssignments] = useState([{ year: "", section: "" }]);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const handleAddAssignment = () => {
+    setAssignments([...assignments, { year: "", section: "" }]);
+  };
+
+  const handleRemoveAssignment = (index) => {
+    if (assignments.length > 1) {
+      setAssignments(assignments.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleAssignmentChange = (index, field, value) => {
+    const newAssignments = [...assignments];
+    newAssignments[index][field] = value;
+    setAssignments(newAssignments);
+  };
 
   const handleAssign = async (e) => {
     e.preventDefault();
     setMessage(null);
-    if (!selectedFaculty || !selectedYear || !selectedSection) {
-      setMessage({ type: "error", text: "All fields are required." });
+
+    if (!selectedFaculty) {
+      setMessage({ type: "error", text: "Please select a faculty member." });
       return;
     }
+
+    // Validate all assignments
+    for (const assignment of assignments) {
+      if (!assignment.year || !assignment.section) {
+        setMessage({
+          type: "error",
+          text: "All year and section fields are required.",
+        });
+        return;
+      }
+    }
+
+    // Check for duplicates
+    const assignmentKeys = assignments.map((a) => `${a.year}-${a.section}`);
+    const uniqueKeys = new Set(assignmentKeys);
+    if (assignmentKeys.length !== uniqueKeys.size) {
+      setMessage({
+        type: "error",
+        text: "Duplicate year-section combinations are not allowed.",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await axios.post("/api/hod/assign-faculty", {
         faculty_id: selectedFaculty,
         dept_code: facultyList.find((f) => f.faculty_id === selectedFaculty)
           ?.dept_code,
-        year: selectedYear,
-        section: selectedSection,
+        assignments: assignments,
       });
-      setMessage({ type: "success", text: "Section assigned successfully!" });
+      setMessage({
+        type: "success",
+        text: `Successfully assigned ${assignments.length} section(s)!`,
+      });
+
+      // Refresh faculty list to show updated assignments immediately
+      if (refreshFacultyList) {
+        refreshFacultyList();
+      }
+
+      // Reset form
+      setTimeout(() => {
+        setSelectedFaculty("");
+        setAssignments([{ year: "", section: "" }]);
+      }, 1500);
     } catch (err) {
       setMessage({
         type: "error",
         text:
           err.response?.data?.message ||
-          "Failed to assign section. Please try again.",
+          "Failed to assign sections. Please try again.",
       });
     }
     setLoading(false);
@@ -199,7 +261,20 @@ function FacultyManagementTab({ years, sections, facultyList }) {
               <div>
                 <div className="font-semibold text-lg">{faculty.name}</div>
                 <div className="text-sm text-gray-600">
-                  Sections: {faculty.section} | Year: {faculty.year}
+                  {faculty.assignments && faculty.assignments.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {faculty.assignments.map((assignment, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs"
+                        >
+                          {assignment.year}-{assignment.section}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">Not assigned</span>
+                  )}
                 </div>
               </div>
               <span className="px-2 text-xs rounded-2xl border border-green-600 text-green-600 bg-white font-semibold">
@@ -209,12 +284,12 @@ function FacultyManagementTab({ years, sections, facultyList }) {
           ))}
         </div>
       </div>
-      <div className="w-full md:w-1/2 bg-white p-6 rounded-lg shadow">
-        <h2 className="text-2xl font-bold mb-1">Assign Section to Faculty</h2>
+      <div className="w-full md:w-1/2 bg-white p-6 rounded-lg shadow max-h-[600px] overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-1">Assign Sections to Faculty</h2>
         <p className="text-gray-500 mb-4">
-          Assign a section and year to a faculty member
+          Assign multiple sections across different years to a faculty member
         </p>
-        <form className="space-y-3" onSubmit={handleAssign}>
+        <form className="space-y-4" onSubmit={handleAssign}>
           <div>
             <label className="block text-sm font-medium mb-1">
               Select Faculty
@@ -232,42 +307,76 @@ function FacultyManagementTab({ years, sections, facultyList }) {
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Year</label>
-            <select
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              <option value="">Choose year</option>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
+
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <label className="block text-sm font-medium">
+                Section Assignments
+              </label>
+              <button
+                type="button"
+                onClick={handleAddAssignment}
+                className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition"
+              >
+                + Add Section
+              </button>
+            </div>
+
+            {assignments.map((assignment, index) => (
+              <div key={index} className="flex gap-2 mb-3 items-start">
+                <div className="flex-1">
+                  <select
+                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={assignment.year}
+                    onChange={(e) =>
+                      handleAssignmentChange(index, "year", e.target.value)
+                    }
+                  >
+                    <option value="">Choose year</option>
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        Year {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <select
+                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={assignment.section}
+                    onChange={(e) =>
+                      handleAssignmentChange(index, "section", e.target.value)
+                    }
+                  >
+                    <option value="">Choose section</option>
+                    {sections.map((s) => (
+                      <option key={s} value={s}>
+                        Section {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAssignment(index)}
+                  disabled={assignments.length === 1}
+                  className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Remove assignment"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Section</label>
-            <select
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-            >
-              <option value="">Choose section</option>
-              {sections.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+
           <button
             type="submit"
             disabled={loading}
             className="w-full mt-4 flex justify-center items-center gap-2 bg-blue-600 text-white font-medium py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
           >
-            {loading ? "Assigning..." : "Assign Section"}
+            {loading
+              ? "Assigning..."
+              : `Assign ${assignments.length} Section(s)`}
           </button>
           {message && (
             <div
@@ -419,6 +528,17 @@ function HeadDashboard() {
     { key: "More", label: "More", icon: <FiUserPlus /> },
   ];
 
+  const fetchFaculty = async () => {
+    try {
+      const { data } = await axios.get(
+        `/api/hod/faculty?dept=${currentUser.dept_code}`
+      );
+      setFacultyList(data);
+    } catch (error) {
+      console.error("Error fetching faculty:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -435,16 +555,6 @@ function HeadDashboard() {
       }
     };
     fetchStudents();
-    const fetchFaculty = async () => {
-      try {
-        const { data } = await axios.get(
-          `/api/hod/faculty?dept=${currentUser.dept_code}`
-        );
-        setFacultyList(data);
-      } catch (error) {
-        console.error("Error fetching faculty:", error);
-      }
-    };
     if (currentUser.dept_code) {
       fetchFaculty();
     }
@@ -520,6 +630,7 @@ function HeadDashboard() {
                 years={years}
                 sections={sections}
                 facultyList={facultyList}
+                refreshFacultyList={fetchFaculty}
               />
             )}
 
