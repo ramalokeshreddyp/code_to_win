@@ -11,18 +11,21 @@ import {
   DeleteIndividualStudentModal,
   ResetPasswordModal,
 } from "../../components/Modals";
-import UserProfile from "../../components/ui/UserProfile";
 import { useMeta } from "../../context/MetaContext";
 import Footer from "../../components/Footer";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import StatsCard from "../../components/ui/StatsCard";
 import { exportStudentsToExcel } from "../../utils/excelExport";
+import dayjs from "dayjs";
 import {
-  FiMenu,
   FiBarChart2,
   FiUsers,
   FiUserPlus,
-  FiSettings,
   FiDownload,
+  FiClock,
+  FiHome,
+  FiLayers,
+  FiGrid,
 } from "react-icons/fi";
 
 // Lazy-loaded components
@@ -30,27 +33,7 @@ const RankingTable = lazy(() => import("../../components/Ranking"));
 const ViewProfile = lazy(() => import("../../components/ViewProfile"));
 const StudentTable = lazy(() => import("../../components/ui/StudentTable"));
 
-// Stats Cards
-function StatsCards({ currentUser }) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-gray-500 text-sm">Total Students</h2>
-        <p className="text-2xl font-bold">{currentUser.total_students}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-gray-500 text-sm">Faculty Members</h2>
-        <p className="text-2xl font-bold">{currentUser.total_faculty}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-gray-500 text-sm">Sections</h2>
-        <p className="text-2xl font-bold">{currentUser.total_sections}</p>
-      </div>
-    </div>
-  );
-}
-
-// Student Management Tab
+// Student Management Tab Component
 function StudentManagementTab({
   years,
   sections,
@@ -65,12 +48,14 @@ function StudentManagementTab({
   currentUser,
 }) {
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden min-w-full p-2 md:p-5">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Student Management</h2>
-          <p className="text-gray-500">
-            Manage student records, update details, and more.
+          <h2 className="text-xl font-bold text-gray-800">
+            Student Management
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Manage student records and view details
           </p>
         </div>
         <button
@@ -80,22 +65,25 @@ function StudentManagementTab({
               `hod_students_${currentUser?.dept_code}`
             )
           }
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition shadow-sm"
         >
           <FiDownload />
           Export Excel
         </button>
       </div>
-      <div className="flex gap-4 mb-4 items-end justify-between px-5">
-        <div className="flex gap-5">
+
+      <div className="flex flex-col md:flex-row gap-4 mb-6 items-end justify-between">
+        <div className="flex gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Year</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              Year
+            </label>
             <select
-              className="border rounded px-2 py-1"
+              className="border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
             >
-              <option value="">All</option>
+              <option value="">All Years</option>
               {years.map((year) => (
                 <option key={year} value={year}>
                   {year}
@@ -104,13 +92,15 @@ function StudentManagementTab({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Section</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              Section
+            </label>
             <select
-              className="border rounded px-2 py-1"
+              className="border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               value={filterSection}
               onChange={(e) => setFilterSection(e.target.value)}
             >
-              <option value="">All</option>
+              <option value="">All Sections</option>
               {sections.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -119,25 +109,20 @@ function StudentManagementTab({
             </select>
           </div>
         </div>
-        <div className="relative mt-5">
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 opacity-85 text-blue-800" />
+        <div className="relative w-full md:w-64">
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search students..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-3 py-2 border w-[200px] border-gray-300 rounded-lg hover:bg-blue-50 focus:ring-1 focus:border-blue-100 transition focus:outline-none"
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 text-sm"
           />
         </div>
       </div>
-      <Suspense
-        fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center h-screen bg-black/30">
-            <LoadingSpinner />
-          </div>
-        }
-      >
-        <div className="overflow-x-scroll md:overflow-hidden">
+
+      <Suspense fallback={<LoadingSpinner />}>
+        <div className="overflow-x-auto rounded-xl border border-gray-100">
           <StudentTable
             students={filteredStudents}
             showBranch={true}
@@ -152,7 +137,7 @@ function StudentManagementTab({
   );
 }
 
-// Faculty Management Tab
+// Faculty Management Tab Component
 function FacultyManagementTab({
   years,
   sections,
@@ -224,12 +209,10 @@ function FacultyManagementTab({
         text: `Successfully assigned ${assignments.length} section(s)!`,
       });
 
-      // Refresh faculty list to show updated assignments immediately
       if (refreshFacultyList) {
         refreshFacultyList();
       }
 
-      // Reset form
       setTimeout(() => {
         setSelectedFaculty("");
         setAssignments([{ year: "", section: "" }]);
@@ -246,60 +229,68 @@ function FacultyManagementTab({
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-full md:w-1/2 bg-white p-6 rounded-lg shadow">
-        <h2 className="text-2xl font-bold mb-1">Faculty Overview</h2>
-        <p className="text-gray-500 mb-4">
-          Current faculty and their assignments
-        </p>
-        <div className="space-y-4 h-96 overflow-y-scroll">
+    <div className="flex flex-col xl:flex-row gap-6">
+      <div className="w-full xl:w-1/2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          Faculty Overview
+        </h2>
+        <div className="space-y-4 h-[500px] overflow-y-auto pr-2 custom-scrollbar">
           {facultyList.map((faculty, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between border border-gray-200 rounded px-4 py-3 bg-gray-50"
+              className="p-4 rounded-xl border border-gray-100 bg-gray-50 hover:border-blue-200 transition-colors"
             >
-              <div>
-                <div className="font-semibold text-lg">{faculty.name}</div>
-                <div className="text-sm text-gray-600">
-                  {faculty.assignments && faculty.assignments.length > 0 ? (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {faculty.assignments.map((assignment, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs"
-                        >
-                          {assignment.year}-{assignment.section}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">Not assigned</span>
-                  )}
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="font-bold text-gray-900">{faculty.name}</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">
+                    Assignments
+                  </div>
                 </div>
+                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 font-medium">
+                  Active
+                </span>
               </div>
-              <span className="px-2 text-xs rounded-2xl border border-green-600 text-green-600 bg-white font-semibold">
-                Active
-              </span>
+              <div className="flex flex-wrap gap-2">
+                {faculty.assignments && faculty.assignments.length > 0 ? (
+                  faculty.assignments.map((assignment, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-white text-blue-700 border border-blue-100 shadow-sm"
+                    >
+                      Year {assignment.year} - Sec {assignment.section}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-400 italic">
+                    No active assignments
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </div>
-      <div className="w-full md:w-1/2 bg-white p-6 rounded-lg shadow max-h-[600px] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-1">Assign Sections to Faculty</h2>
-        <p className="text-gray-500 mb-4">
-          Assign multiple sections across different years to a faculty member
+
+      <div className="w-full xl:w-1/2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-bold text-gray-800 mb-1">
+          Assign Sections
+        </h2>
+        <p className="text-gray-500 text-sm mb-6">
+          Manage teaching assignments for faculty members
         </p>
-        <form className="space-y-4" onSubmit={handleAssign}>
+
+        <form className="space-y-6" onSubmit={handleAssign}>
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Select Faculty
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Faculty Member
             </label>
             <select
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
               value={selectedFaculty}
               onChange={(e) => setSelectedFaculty(e.target.value)}
             >
-              <option value="">Choose faculty</option>
+              <option value="">Choose faculty...</option>
               {facultyList.map((faculty, idx) => (
                 <option key={idx} value={faculty.faculty_id}>
                   {faculty.name}
@@ -308,80 +299,80 @@ function FacultyManagementTab({
             </select>
           </div>
 
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-medium">
-                Section Assignments
+          <div className="border-t border-gray-100 pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Class Assignments
               </label>
               <button
                 type="button"
                 onClick={handleAddAssignment}
-                className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition"
+                className="text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-medium hover:bg-blue-100 transition"
               >
-                + Add Section
+                + Add Another
               </button>
             </div>
 
-            {assignments.map((assignment, index) => (
-              <div key={index} className="flex gap-2 mb-3 items-start">
-                <div className="flex-1">
-                  <select
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={assignment.year}
-                    onChange={(e) =>
-                      handleAssignmentChange(index, "year", e.target.value)
-                    }
+            <div className="space-y-3">
+              {assignments.map((assignment, index) => (
+                <div key={index} className="flex gap-3 items-center">
+                  <div className="flex-1 grid grid-cols-2 gap-3">
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={assignment.year}
+                      onChange={(e) =>
+                        handleAssignmentChange(index, "year", e.target.value)
+                      }
+                    >
+                      <option value="">Year</option>
+                      {years.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={assignment.section}
+                      onChange={(e) =>
+                        handleAssignmentChange(index, "section", e.target.value)
+                      }
+                    >
+                      <option value="">Section</option>
+                      {sections.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAssignment(index)}
+                    disabled={assignments.length === 1}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-30"
                   >
-                    <option value="">Choose year</option>
-                    {years.map((year) => (
-                      <option key={year} value={year}>
-                        Year {year}
-                      </option>
-                    ))}
-                  </select>
+                    ✕
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <select
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={assignment.section}
-                    onChange={(e) =>
-                      handleAssignmentChange(index, "section", e.target.value)
-                    }
-                  >
-                    <option value="">Choose section</option>
-                    {sections.map((s) => (
-                      <option key={s} value={s}>
-                        Section {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAssignment(index)}
-                  disabled={assignments.length === 1}
-                  className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Remove assignment"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 flex justify-center items-center gap-2 bg-blue-600 text-white font-medium py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+            className="w-full mt-4 flex justify-center items-center gap-2 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-200 disabled:opacity-70"
           >
-            {loading
-              ? "Assigning..."
-              : `Assign ${assignments.length} Section(s)`}
+            {loading ? "Processing..." : "Save Assignments"}
           </button>
+
           {message && (
             <div
-              className={`mt-2 text-center text-sm ${
-                message.type === "success" ? "text-green-600" : "text-red-600"
+              className={`p-3 rounded-lg text-sm text-center ${
+                message.type === "success"
+                  ? "bg-green-50 text-green-700"
+                  : "bg-red-50 text-red-700"
               }`}
             >
               {message.text}
@@ -393,117 +384,73 @@ function FacultyManagementTab({
   );
 }
 
-// Add Student Tab
-function AddStudentTab() {
+// More Actions Tab Component
+function MoreActionsTab() {
   const [menu, setMenu] = useState("individual");
+
+  const menuOptions = [
+    { id: "individual", label: "Add Student" },
+    { id: "addFaculty", label: "Add Faculty" },
+    { id: "bulk", label: "Bulk Import" },
+    { id: "reset", label: "Reset Password" },
+    { id: "delete", label: "Delete Student" },
+  ];
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-0 md:p-6 bg-gray-50">
+    <div className="flex flex-col lg:flex-row gap-8">
       {/* Sidebar Menu */}
-      <div className="w-full lg:w-1/4 bg-white p-4 md:p-6 rounded shadow mb-4 lg:mb-0">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">
-          Add Students Menu
-        </h2>
-        <ul className="space-y-2">
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded ${
-                menu === "individual"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-              onClick={() => setMenu("individual")}
-            >
-              Add Student
-            </button>
-          </li>
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded ${
-                menu === "addFaculty"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-              onClick={() => setMenu("addFaculty")}
-            >
-              Add Faculty
-            </button>
-          </li>
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded ${
-                menu === "bulk"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-              onClick={() => setMenu("bulk")}
-            >
-              Bulk Import
-            </button>
-          </li>
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded ${
-                menu === "reset"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-              onClick={() => setMenu("reset")}
-            >
-              Reset Password
-            </button>
-          </li>
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded ${
-                menu === "delete"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-              onClick={() => setMenu("delete")}
-            >
-              Delete
-            </button>
-          </li>
-        </ul>
+      <div className="w-full lg:w-72 flex-shrink-0">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sticky top-4">
+          <h2 className="text-lg font-bold text-gray-900 mb-4 px-2">
+            Quick Actions
+          </h2>
+          <div className="space-y-1">
+            {menuOptions.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setMenu(item.id)}
+                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all ${
+                  menu === item.id
+                    ? "bg-slate-800 text-white shadow-md shadow-slate-200"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-slate-800"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Dynamic Content Area */}
-      <div className="w-full lg:w-3/4">
-        {menu === "individual" && (
-          <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
+      <div className="flex-1">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          {menu === "individual" && (
             <Suspense fallback={<LoadingSpinner />}>
               <AddIndividualStudentModel inline={true} />
             </Suspense>
-          </div>
-        )}
-        {menu === "addFaculty" && (
-          <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
+          )}
+          {menu === "addFaculty" && (
             <Suspense fallback={<LoadingSpinner />}>
               <AddFacultyModal inline={true} />
             </Suspense>
-          </div>
-        )}
-        {menu === "bulk" && (
-          <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
+          )}
+          {menu === "bulk" && (
             <Suspense fallback={<LoadingSpinner />}>
               <BulkImportModal />
             </Suspense>
-          </div>
-        )}
-        {menu === "reset" && (
-          <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
+          )}
+          {menu === "reset" && (
             <Suspense fallback={<LoadingSpinner />}>
               <ResetPasswordModal />
             </Suspense>
-          </div>
-        )}
-        {menu === "delete" && (
-          <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
+          )}
+          {menu === "delete" && (
             <Suspense fallback={<LoadingSpinner />}>
               <DeleteIndividualStudentModal />
             </Suspense>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -518,14 +465,14 @@ function HeadDashboard() {
   const [filterYear, setFilterYear] = useState("");
   const [filterSection, setFilterSection] = useState("");
   const [search, setSearch] = useState("");
-  const [selectedTab, setSelectedTab] = useState("StudentRanking");
+  const [selectedTab, setSelectedTab] = useState("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const menuItems = [
-    { key: "StudentRanking", label: "Student Ranking", icon: <FiBarChart2 /> },
-    { key: "StudentManagment", label: "Student Management", icon: <FiUsers /> },
-    { key: "FacultyManagment", label: "Faculty Management", icon: <FiUsers /> },
-    { key: "More", label: "More", icon: <FiUserPlus /> },
+    { key: "Overview", label: "Overview", icon: <FiHome /> },
+    { key: "StudentRanking", label: "Student Management", icon: <FiUsers /> },
+    { key: "FacultyManagment", label: "Faculty Management", icon: <FiGrid /> },
+    { key: "More", label: "More Actions", icon: <FiUserPlus /> },
   ];
 
   const fetchFaculty = async () => {
@@ -568,6 +515,8 @@ function HeadDashboard() {
         student.student_id?.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const formattedDate = dayjs().format("DD/MM/YYYY | hh:mm A");
+
   return (
     <>
       {selectedStudent && (
@@ -597,19 +546,79 @@ function HeadDashboard() {
           onLogout={logout}
         />
 
-        <div className="flex-1 lg:ml-64">
-          <div className="p-4 md:p-6 space-y-4">
-            <UserProfile user={currentUser} />
-            <StatsCards currentUser={currentUser} />
+        <div className="flex-1 lg:ml-64 transition-all duration-300">
+          <div className="p-4 md:p-8 space-y-8">
+            {/* Overview Section: Hero & Stats */}
+            {selectedTab === "Overview" && (
+              <>
+                {/* Hero Section */}
+                <div className="relative rounded-3xl overflow-hidden shadow-xl bg-gradient-to-r from-slate-800 to-slate-900 text-white p-6 md:p-10">
+                  <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl"></div>
+                  <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-60 h-60 rounded-full bg-indigo-500/10 blur-2xl"></div>
 
-            {/* Content Sections with Suspense */}
-            {selectedTab === "StudentRanking" && (
-              <Suspense fallback={<LoadingSpinner />}>
-                <RankingTable filter={true} />
-              </Suspense>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-3">
+                      <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border border-white/10">
+                        HOD Portal
+                      </span>
+                      <span className="text-slate-300 text-xs flex items-center gap-1">
+                        <FiClock size={12} />
+                        {formattedDate}
+                      </span>
+                    </div>
+                    <h1 className="text-3xl md:text-5xl font-bold mb-2">
+                      {currentUser.name}
+                    </h1>
+                    <p className="text-slate-300 text-lg">
+                      Department of{" "}
+                      <span className="font-semibold text-white">
+                        {currentUser.dept_code}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <StatsCard
+                    icon={<FiUsers />}
+                    title="Total Students"
+                    value={currentUser.total_students || 0}
+                    color="blue"
+                  />
+                  <StatsCard
+                    icon={<FiUsers />}
+                    title="Faculty Members"
+                    value={currentUser.total_faculty || 0}
+                    color="purple"
+                  />
+                  <StatsCard
+                    icon={<FiLayers />}
+                    title="Active Sections"
+                    value={currentUser.total_sections || 0}
+                    color="success"
+                  />
+                </div>
+
+                {/* Live Rankings in Overview */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="p-6 border-b border-gray-100">
+                    <h2 className="text-xl font-bold text-gray-800">
+                      Top Performers
+                    </h2>
+                    <p className="text-gray-500 text-sm">
+                      Live department-wide student rankings
+                    </p>
+                  </div>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <RankingTable filter={true} />
+                  </Suspense>
+                </div>
+              </>
             )}
 
-            {selectedTab === "StudentManagment" && (
+            {/* Dedicated Tabs */}
+            {selectedTab === "StudentRanking" && (
               <StudentManagementTab
                 years={years}
                 sections={sections}
@@ -634,7 +643,7 @@ function HeadDashboard() {
               />
             )}
 
-            {selectedTab === "More" && <AddStudentTab />}
+            {selectedTab === "More" && <MoreActionsTab />}
           </div>
         </div>
       </div>
