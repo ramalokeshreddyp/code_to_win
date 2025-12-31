@@ -67,8 +67,8 @@ router.get("/profile", async (req, res) => {
       visitor_stats: {
         today_visits: visitorStats?.today_visits || 0,
         today_unique_visitors: visitorStats?.today_unique_visitors || 0,
-        live_visitors: liveVisitors?.live_visitors || 0
-      }
+        live_visitors: liveVisitors?.live_visitors || 0,
+      },
     });
   } catch (err) {
     logger.error(
@@ -176,6 +176,9 @@ router.get("/students", async (req, res) => {
           },
           hackerrank: {
             badges: isHackerrankAccepted ? p.stars_hr : 0,
+            badgesList: isHackerrankAccepted
+              ? JSON.parse(p.badgesList_hr || "[]")
+              : [],
           },
         };
 
@@ -415,16 +418,17 @@ router.delete("/hods/:id", async (req, res) => {
 // GET /admin/settings - Get system settings (SA07 only)
 router.get("/settings", async (req, res) => {
   const { userId } = req.query;
-  if (userId !== 'SA07') {
+  if (userId !== "SA07") {
     return res.status(403).json({ message: "Access denied" });
   }
-  
+
   try {
     const [settings] = await db.query(
       "SELECT * FROM system_settings WHERE setting_key = 'verification_required'"
     );
-    const verificationRequired = settings.length > 0 ? settings[0].setting_value === 'true' : true;
-    
+    const verificationRequired =
+      settings.length > 0 ? settings[0].setting_value === "true" : true;
+
     res.json({ verification_required: verificationRequired });
   } catch (err) {
     logger.error(`Error fetching settings: ${err.message}`);
@@ -435,18 +439,22 @@ router.get("/settings", async (req, res) => {
 // POST /admin/toggle-verification - Toggle verification requirement (SA07 only)
 router.post("/toggle-verification", async (req, res) => {
   const { userId, enabled } = req.body;
-  if (userId !== 'SA07') {
+  if (userId !== "SA07") {
     return res.status(403).json({ message: "Access denied" });
   }
-  
+
   try {
     await db.query(
       "INSERT INTO system_settings (setting_key, setting_value, updated_by) VALUES ('verification_required', ?, ?) ON DUPLICATE KEY UPDATE setting_value = ?, updated_by = ?",
-      [enabled ? 'true' : 'false', userId, enabled ? 'true' : 'false', userId]
+      [enabled ? "true" : "false", userId, enabled ? "true" : "false", userId]
     );
-    
-    logger.info(`Verification requirement ${enabled ? 'enabled' : 'disabled'} by ${userId}`);
-    res.json({ message: `Verification ${enabled ? 'enabled' : 'disabled'}` });
+
+    logger.info(
+      `Verification requirement ${
+        enabled ? "enabled" : "disabled"
+      } by ${userId}`
+    );
+    res.json({ message: `Verification ${enabled ? "enabled" : "disabled"}` });
   } catch (err) {
     logger.error(`Error toggling verification: ${err.message}`);
     res.status(500).json({ message: "Server error" });

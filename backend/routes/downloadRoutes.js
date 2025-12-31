@@ -349,7 +349,16 @@ router.get("/custom", async (req, res) => {
       "GFG Medium": d.medium_gfg || 0,
       "GFG Hard": d.hard_gfg || 0,
       "CC Problems": d.problems_cc || 0,
-      "Total Problems": (d.easy_lc || 0) + (d.medium_lc || 0) + (d.hard_lc || 0) +(d.school_gfg||0) + (d.basic_gfg || 0) + (d.easy_gfg || 0) + (d.medium_gfg || 0) + (d.hard_gfg || 0) + (d.problems_cc || 0),
+      "Total Problems":
+        (d.easy_lc || 0) +
+        (d.medium_lc || 0) +
+        (d.hard_lc || 0) +
+        (d.school_gfg || 0) +
+        (d.basic_gfg || 0) +
+        (d.easy_gfg || 0) +
+        (d.medium_gfg || 0) +
+        (d.hard_gfg || 0) +
+        (d.problems_cc || 0),
       Score: d.score || 0,
       "University Rank": d.overall_rank || "N/A",
       "Last Updated": d.last_updated || "N/A",

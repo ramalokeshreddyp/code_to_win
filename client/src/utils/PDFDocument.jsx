@@ -145,7 +145,9 @@ const PDFDocument = ({ student }) => {
         <View style={styles.headerContainer}>
           <View style={styles.header}>
             <View style={styles.avatarContainer}>
-              <Text style={styles.avatar}>{student?.name?.charAt(0) || "S"}</Text>
+              <Text style={styles.avatar}>
+                {student?.name?.charAt(0) || "S"}
+              </Text>
             </View>
             <View style={styles.info}>
               <Text style={styles.name}>{student?.name}</Text>
@@ -165,19 +167,27 @@ const PDFDocument = ({ student }) => {
               <Text style={styles.tableCell}>{student?.college || "AEC"}</Text>
               <Text style={styles.tableCell}>{student?.section || "A"}</Text>
               <Text style={styles.tableCell}>{student?.year || "3"}</Text>
-              <Text style={styles.tableCell}>{student?.dept_name || "AML"}</Text>
-              <Text style={styles.tableCell}>{student?.degree || "B Tech"}</Text>
+              <Text style={styles.tableCell}>
+                {student?.dept_name || "AML"}
+              </Text>
+              <Text style={styles.tableCell}>
+                {student?.degree || "B Tech"}
+              </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{student?.performance?.combined?.totalSolved || 0}</Text>
+            <Text style={styles.statValue}>
+              {student?.performance?.combined?.totalSolved || 0}
+            </Text>
             <Text style={styles.statLabel}>Total Problems</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{student?.performance?.combined?.totalContests || 0}</Text>
+            <Text style={styles.statValue}>
+              {student?.performance?.combined?.totalContests || 0}
+            </Text>
             <Text style={styles.statLabel}>Total Contests</Text>
           </View>
           <View style={styles.statBox}>
@@ -189,10 +199,14 @@ const PDFDocument = ({ student }) => {
         <View style={styles.statsCard}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>LeetCode</Text>
-            <Text style={styles.statValue}>{(leet.easy || 0) + (leet.medium || 0) + (leet.hard || 0)}</Text>
+            <Text style={styles.statValue}>
+              {(leet.easy || 0) + (leet.medium || 0) + (leet.hard || 0)}
+            </Text>
             <Text style={styles.statLabel}>Problems Solved</Text>
             <Text style={styles.breakdown}>
-              Easy: {leet?.easy || 0}, Medium: {leet.medium || 0}, Hard: {leet.hard || 0}, Contest: {leet.contests || 0}, Badges: {leet.badges || 0}
+              Easy: {leet?.easy || 0}, Medium: {leet.medium || 0}, Hard:{" "}
+              {leet.hard || 0}, Contest: {leet.contests || 0}, Badges:{" "}
+              {leet.badges || 0}
             </Text>
           </View>
 
@@ -201,7 +215,8 @@ const PDFDocument = ({ student }) => {
             <Text style={styles.statValue}>{codechef.contests ?? 0}</Text>
             <Text style={styles.statLabel}>Contests Participated</Text>
             <Text style={styles.breakdown}>
-              Problems Solved: {codechef.problems || 0}, Star: {codechef.stars || 0}, Badges: {codechef.badges || 0}
+              Problems Solved: {codechef.problems || 0}, Star:{" "}
+              {codechef.stars || 0}, Badges: {codechef.badges || 0}
             </Text>
           </View>
         </View>
@@ -210,11 +225,16 @@ const PDFDocument = ({ student }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>GeeksforGeeks</Text>
             <Text style={styles.statValue}>
-              {(gfg.school || 0) + (gfg.basic || 0) + (gfg.easy || 0) + (gfg.medium || 0) + (gfg.hard || 0)}
+              {(gfg.school || 0) +
+                (gfg.basic || 0) +
+                (gfg.easy || 0) +
+                (gfg.medium || 0) +
+                (gfg.hard || 0)}
             </Text>
             <Text style={styles.statLabel}>Problems Solved</Text>
             <Text style={styles.breakdown}>
-              School: {gfg.school || 0}, Basic: {gfg.basic || 0}, Easy: {gfg.easy || 0}, Medium: {gfg.medium || 0}, Hard: {gfg.hard || 0}
+              School: {gfg.school || 0}, Basic: {gfg.basic || 0}, Easy:{" "}
+              {gfg.easy || 0}, Medium: {gfg.medium || 0}, Hard: {gfg.hard || 0}
             </Text>
           </View>
 
@@ -222,6 +242,12 @@ const PDFDocument = ({ student }) => {
             <Text style={styles.sectionTitle}>HackerRank</Text>
             <Text style={styles.statValue}>{hackerrank.badges || 0}</Text>
             <Text style={styles.statLabel}>Badges Gained</Text>
+            <Text style={styles.breakdown}>
+              Badges:{" "}
+              {(hackerrank.badgesList || [])
+                .map((b) => `${b.name}: ${b.stars}★`)
+                .join(", ")}
+            </Text>
           </View>
         </View>
       </Page>

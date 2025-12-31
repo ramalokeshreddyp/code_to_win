@@ -398,11 +398,14 @@ const StudentDashboard = () => {
                   ani="fade-down"
                   total={currentUser.performance.platformWise.hackerrank.badges}
                   subtitle="Stars Gained"
-                  // breakdown={{
-                  //   Badges: (currentUser.performance.platformWise.hackerrank.badgesList || [])
-                  //     .map(badge => `${badge.name}: ${badge.stars}★`)
-                  //     .join(", ")
-                  // }}
+                  breakdown={{
+                    Badges: (
+                      currentUser.performance.platformWise.hackerrank
+                        .badgesList || []
+                    )
+                      .map((badge) => `${badge.name}: ${badge.stars}★`)
+                      .join(", "),
+                  }}
                 />
               )}
             </div>

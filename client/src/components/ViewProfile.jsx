@@ -9,7 +9,6 @@ import PDFDocument from "../utils/PDFDocument";
 const ViewProfile = ({ student, onClose }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-
   const handleDownloadPDF = async () => {
     setIsGeneratingPDF(true);
     try {
@@ -17,8 +16,9 @@ const ViewProfile = ({ student, onClose }) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${student?.name + "_" + student?.student_id || "profile"
-        }.pdf`;
+      link.download = `${
+        student?.name + "_" + student?.student_id || "profile"
+      }.pdf`;
       link.click();
       URL.revokeObjectURL(url);
       setIsGeneratingPDF(false);
@@ -33,7 +33,8 @@ const ViewProfile = ({ student, onClose }) => {
       className="fixed inset-0 z-70 flex items-start justify-center h-screen overflow-scroll bg-[#00000055]  "
     >
       <div
-        className="bg-[#f7f7f7] rounded-xl space-y-4 p-6 w-full flex flex-col items-center max-w-3xl shadow-lg relative" data-aos="fade"
+        className="bg-[#f7f7f7] rounded-xl space-y-4 p-6 w-full flex flex-col items-center max-w-3xl shadow-lg relative"
+        data-aos="fade"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Profile Content */}
@@ -45,7 +46,9 @@ const ViewProfile = ({ student, onClose }) => {
                 {student?.name?.charAt(0)}
               </div>
               <div>
-                <h2 className="md:text-lg text-md max-w-44 md:max-w-full font-semibold">{student?.name}</h2>
+                <h2 className="md:text-lg text-md max-w-44 md:max-w-full font-semibold">
+                  {student?.name}
+                </h2>
                 <span className="text-xs bg-[#ffffff] text-[#3370ff] px-2 py-0.5 rounded-full font-medium">
                   {student?.student_id}
                 </span>
@@ -53,7 +56,6 @@ const ViewProfile = ({ student, onClose }) => {
             </div>
             {/* Info Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-x-8 w-full text-sm font-medium text-[#ffffff] md:gap-y-3 gap-y-1">
-
               {[
                 { label: "Campus", value: student?.college },
                 { label: "Section", value: student?.section },
@@ -61,12 +63,14 @@ const ViewProfile = ({ student, onClose }) => {
                 { label: "Department", value: student?.dept_name },
                 { label: "Degree", value: student?.degree },
               ].map((label, index) => (
-                <div key={index} className="text-[#ffffffd6] flex md:flex-col flex-row gap-x-1">
+                <div
+                  key={index}
+                  className="text-[#ffffffd6] flex md:flex-col flex-row gap-x-1"
+                >
                   {label.label}:{label.value}
                 </div>
               ))}
             </div>
-
           </div>
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 w-full">
@@ -147,6 +151,14 @@ const ViewProfile = ({ student, onClose }) => {
               color=" hover:text-black hover:shadow-black"
               total={student?.performance?.platformWise?.hackerrank?.badges}
               subtitle="Badges Gained"
+              breakdown={{
+                Badges: (
+                  student?.performance?.platformWise?.hackerrank?.badgesList ||
+                  []
+                )
+                  .map((badge) => `${badge.name}: ${badge.stars}★`)
+                  .join(", "),
+              }}
             />
           </div>
         </div>
@@ -169,7 +181,7 @@ const ViewProfile = ({ student, onClose }) => {
           <IoCloseCircle />
         </button>
       </div>
-    </div >
+    </div>
   );
 };
 

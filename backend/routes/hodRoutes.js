@@ -175,6 +175,9 @@ router.get("/students", async (req, res) => {
           },
           hackerrank: {
             badges: isHackerrankAccepted ? p.stars_hr : 0,
+            badgesList: isHackerrankAccepted
+              ? JSON.parse(p.badgesList_hr || "[]")
+              : [],
           },
         };
 
@@ -260,11 +263,9 @@ router.post("/assign-faculty", async (req, res) => {
     !Array.isArray(assignments)
   ) {
     logger.warn("Missing or invalid fields in assign-faculty");
-    return res
-      .status(400)
-      .json({
-        message: "Faculty ID, department, and assignments array are required",
-      });
+    return res.status(400).json({
+      message: "Faculty ID, department, and assignments array are required",
+    });
   }
 
   if (assignments.length === 0) {

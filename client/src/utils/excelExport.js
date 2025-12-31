@@ -14,6 +14,11 @@ export const exportStudentsToExcel = (students, filename = "students") => {
     "University Rank": student.overall_rank || "N/A",
     "Total Problems": student.performance?.combined?.totalSolved || 0,
     "Total Contests": student.performance?.combined?.totalContests || 0,
+    "HackerRank Badges": (
+      student.performance?.platformWise?.hackerrank?.badgesList || []
+    )
+      .map((b) => `${b.name}: ${b.stars}★`)
+      .join(", "),
     "Last Updated": student.performance?.combined?.last_updated || "N/A",
   }));
 

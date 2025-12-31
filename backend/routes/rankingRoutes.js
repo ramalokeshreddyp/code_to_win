@@ -126,6 +126,9 @@ LIMIT ?`,
           },
           hackerrank: {
             badges: isHackerrankAccepted ? p.stars_hr : 0,
+            badgesList: isHackerrankAccepted
+              ? JSON.parse(p.badgesList_hr || "[]")
+              : [],
           },
         };
 
@@ -265,6 +268,9 @@ LIMIT ?`,
           },
           hackerrank: {
             badges: isHackerrankAccepted ? p.stars_hr : 0,
+            badgesList: isHackerrankAccepted
+              ? JSON.parse(p.badgesList_hr || "[]")
+              : [],
           },
         };
 

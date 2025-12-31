@@ -162,6 +162,9 @@ router.get("/students", async (req, res) => {
           },
           hackerrank: {
             badges: isHackerrankAccepted ? p.stars_hr : 0,
+            badgesList: isHackerrankAccepted
+              ? JSON.parse(p.badgesList_hr || "[]")
+              : [],
           },
         };
 
@@ -179,8 +182,6 @@ router.get("/students", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
 
 // GET /faculty/coding-profile-requests?dept=CSE&year=3&section=A
 router.get("/coding-profile-requests", async (req, res) => {
@@ -209,7 +210,7 @@ router.post("/verify-coding-profile", async (req, res) => {
   try {
     const status = action === "accept" ? "accepted" : "rejected";
     const verified = action === "accept" ? 1 : 0;
-    
+
     await db.query(
       `UPDATE student_coding_profiles
        SET ${platform}_status = ?, ${platform}_verified = ?, verified_by = ?
@@ -246,12 +247,13 @@ router.get("/notifications", async (req, res) => {
     const [settings] = await db.query(
       "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
     );
-    const verificationRequired = settings.length > 0 ? settings[0].setting_value === 'true' : true;
-    
+    const verificationRequired =
+      settings.length > 0 ? settings[0].setting_value === "true" : true;
+
     if (!verificationRequired) {
       return res.json([]);
     }
-    
+
     const [assignment] = await db.query(
       "SELECT year, section FROM faculty_section_assignment WHERE faculty_id = ?",
       [userId]
@@ -275,15 +277,19 @@ router.get("/notifications", async (req, res) => {
 
     const count = pendingCount[0].count;
     if (count > 0) {
-      res.json([{
-        id: "pending-requests",
-        title: "Pending Profile Requests",
-        message: `You have ${count} coding profile request${count > 1 ? "s" : ""} to review`,
-        status: "pending",
-        read: false,
-        created_at: new Date().toISOString(),
-        count: count,
-      }]);
+      res.json([
+        {
+          id: "pending-requests",
+          title: "Pending Profile Requests",
+          message: `You have ${count} coding profile request${
+            count > 1 ? "s" : ""
+          } to review`,
+          status: "pending",
+          read: false,
+          created_at: new Date().toISOString(),
+          count: count,
+        },
+      ]);
     } else {
       res.json([]);
     }
@@ -292,7 +298,5 @@ router.get("/notifications", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
 
 module.exports = router;
