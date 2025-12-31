@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ComposedChart,
   Bar,
@@ -9,126 +9,113 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ScatterChart,
-  Scatter,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  Treemap,
-  FunnelChart,
-  Funnel,
-  LabelList,
 } from "recharts";
-import {
-  FiFilter,
-  FiDownload,
-  FiMaximize2,
-  FiMinimize2,
-  FiSettings,
-  FiCalendar,
-  FiBarChart2,
-  FiPieChart,
-  FiTrendingUp,
-} from "react-icons/fi";
+import { FiFilter, FiDownload, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useMeta } from "../../context/MetaContext";
 
-const InteractiveDashboard = ({ data, title = "Interactive Analytics" }) => {
+const InteractiveDashboard = ({
+  data = [],
+  title = "Interactive Analytics",
+}) => {
   const { depts, years, sections } = useMeta();
   const [filters, setFilters] = useState({
-    dateRange: "30d",
+    year: "all",
     department: "all",
-    platform: "all",
-    metric: "score",
+    section: "all",
   });
-  const [chartType, setChartType] = useState("bar");
+
+  const [loading, setLoading] = useState(false);
+  const [chartData, setChartData] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [availableSections, setAvailableSections] = useState([]);
 
-  // Process data based on filters
-  const filteredData = useMemo(() => {
-    if (!data || !Array.isArray(data)) return [];
-
-    let processed = [...data];
-
-    // Apply department filter
-    if (filters.department !== "all") {
-      processed = processed.filter((item) => {
-        return item.dept_name === filters.department || 
-               item.dept_code === filters.department;
-      });
-    }
-
-    // Apply platform filter
-    if (filters.platform !== "all") {
-      processed = processed.filter((item) => {
-        const perf = item.performance?.platformWise;
-        if (!perf) return false;
-
-        switch (filters.platform) {
-          case "leetcode":
-            return perf.leetcode && (perf.leetcode.easy + perf.leetcode.medium + perf.leetcode.hard) > 0;
-          case "codechef":
-            return perf.codechef && perf.codechef.problems > 0;
-          case "gfg":
-            return perf.gfg && (perf.gfg.school + perf.gfg.basic + perf.gfg.easy + perf.gfg.medium + perf.gfg.hard) > 0;
-          case "hackerrank":
-            return perf.hackerrank && perf.hackerrank.badges > 0;
-          default:
-            return true;
+  // Fetch sections when Dept or Year changes
+  useEffect(() => {
+    const fetchSections = async () => {
+      // Don't fetch if dependencies are not selected
+      if (filters.department === "all" || filters.year === "all") {
+        setAvailableSections([]);
+        // Reset section filter if it was set
+        if (filters.section !== "all") {
+          setFilters((prev) => ({ ...prev, section: "all" }));
         }
-      });
-    }
+        return;
+      }
 
-    return processed.slice(0, 50);
-  }, [data, filters]);
+      try {
+        const params = new URLSearchParams();
+        params.append("dept", filters.department);
+        params.append("year", filters.year);
 
-  // Chart data transformations
-  const chartData = useMemo(() => {
-    return filteredData.map((item, index) => ({
-      name: item.name?.split(" ")[0] || `Student ${index + 1}`,
-      score: item.score || 0,
-      totalSolved: item.performance?.combined?.totalSolved || 0,
-      contests: item.performance?.combined?.totalContests || 0,
-      rank: index + 1,
-      department: item.dept_name,
-    }));
-  }, [filteredData]);
+        const res = await fetch(`/api/meta/sections?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableSections(Array.isArray(data) ? data : []);
+        } else {
+          setAvailableSections([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch sections:", error);
+        setAvailableSections([]);
+      }
+    };
 
-  // Radar chart data for top performers
-  const radarData = useMemo(() => {
-    const top5 = filteredData.slice(0, 5);
-    return top5.map((student) => {
-      const perf = student.performance?.platformWise;
-      return {
-        name: student.name?.split(" ")[0],
-        LeetCode: perf?.leetcode
-          ? perf.leetcode.easy + perf.leetcode.medium + perf.leetcode.hard
-          : 0,
-        CodeChef: perf?.codechef?.problems || 0,
-        GeeksforGeeks: perf?.gfg
-          ? perf.gfg.school +
-            perf.gfg.basic +
-            perf.gfg.easy +
-            perf.gfg.medium +
-            perf.gfg.hard
-          : 0,
-        HackerRank: perf?.hackerrank?.badges || 0,
-      };
-    });
-  }, [filteredData]);
+    fetchSections();
+  }, [filters.department, filters.year]);
+
+  // Fetch data when filters change
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Map frontend filter state to backend query params
+        const params = new URLSearchParams();
+
+        if (filters.department !== "all")
+          params.append("dept", filters.department);
+        if (filters.year !== "all") params.append("year", filters.year);
+        if (filters.section !== "all")
+          params.append("section", filters.section);
+
+        const res = await fetch(
+          `/api/admin/analytics/performance-graph?${params.toString()}`
+        );
+        if (res.ok) {
+          const result = await res.json();
+          setChartData(result);
+        }
+      } catch (error) {
+        console.error("Graph fetch error", error);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [filters]);
 
   const exportData = () => {
+    if (!chartData.length) return;
+
     const csvContent = [
-      ["Name", "Score", "Total Solved", "Contests", "Department"],
+      [
+        "Name",
+        "Score",
+        "Rank",
+        "Department",
+        "Solved",
+        "Contests",
+        "Last Updated",
+      ],
       ...chartData.map((item) => [
         item.name,
         item.score,
+        item.overall_rank,
+        item.department,
         item.totalSolved,
         item.contests,
-        item.department,
+        new Date(item.last_updated).toLocaleDateString(),
       ]),
     ]
       .map((row) => row.join(","))
@@ -138,60 +125,24 @@ const InteractiveDashboard = ({ data, title = "Interactive Analytics" }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `analytics_${filters.dateRange}_${Date.now()}.csv`;
+    a.download = `performance_analytics_${Date.now()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
     toast.success("Data exported successfully!");
   };
 
-  const ChartRenderer = () => {
-    return (
-      <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart
-          data={chartData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis yAxisId="left" />
-          <YAxis yAxisId="right" orientation="right" />
-          <Tooltip />
-          <Legend />
-          <Bar yAxisId="left" dataKey="score" fill="#3B82F6" name="Score" />
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="totalSolved"
-            stroke="#10B981"
-            strokeWidth={2}
-            name="Problems Solved"
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    );
-  };
-
   return (
     <div
       className={`bg-white rounded-xl shadow-sm border border-gray-100 ${
-        isFullscreen ? "fixed inset-0 z-50 m-4" : ""
+        isFullscreen ? "fixed inset-0 z-50 m-4 overflow-auto" : ""
       }`}
     >
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <div className="flex items-center space-x-2">
-            {/* Chart Type Selector */}
-            <select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="bar">Bar Chart</option>
-            </select>
 
-            {/* Filter Toggle */}
+          <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`p-2 rounded-lg ${
@@ -202,16 +153,13 @@ const InteractiveDashboard = ({ data, title = "Interactive Analytics" }) => {
             >
               <FiFilter className="w-4 h-4" />
             </button>
-
-            {/* Export Button */}
             <button
               onClick={exportData}
               className="p-2 text-gray-400 hover:text-gray-600"
+              title="Export CSV"
             >
               <FiDownload className="w-4 h-4" />
             </button>
-
-            {/* Fullscreen Toggle */}
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 text-gray-400 hover:text-gray-600"
@@ -227,30 +175,10 @@ const InteractiveDashboard = ({ data, title = "Interactive Analytics" }) => {
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date Range
-                </label>
-                <select
-                  value={filters.dateRange}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      dateRange: e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                  <option value="90d">Last 90 days</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">
                   Department
                 </label>
                 <select
@@ -261,53 +189,68 @@ const InteractiveDashboard = ({ data, title = "Interactive Analytics" }) => {
                       department: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="all">All Departments</option>
-                  {depts.map((dept) => (
-                    <option key={dept.dept_code} value={dept.dept_code}>
-                      {dept.dept_name}
+                  {depts.map((d) => (
+                    <option key={d.dept_code} value={d.dept_code}>
+                      {d.dept_name}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Platform
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Year
                 </label>
                 <select
-                  value={filters.platform}
+                  value={filters.year}
                   onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      platform: e.target.value,
-                    }))
+                    setFilters((prev) => ({ ...prev, year: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 >
-                  <option value="all">All Platforms</option>
-                  <option value="leetcode">LeetCode</option>
-                  <option value="codechef">CodeChef</option>
-                  <option value="gfg">GeeksforGeeks</option>
-                  <option value="hackerrank">HackerRank</option>
+                  <option value="all">All Years</option>
+                  {[1, 2, 3, 4].map((y) => (
+                    <option key={y} value={y}>
+                      {y === 1
+                        ? "1st"
+                        : y === 2
+                        ? "2nd"
+                        : y === 3
+                        ? "3rd"
+                        : "4th"}{" "}
+                      Year
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Metric
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Section
                 </label>
                 <select
-                  value={filters.metric}
+                  value={filters.section}
                   onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, metric: e.target.value }))
+                    setFilters((prev) => ({ ...prev, section: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  disabled={
+                    filters.department === "all" || filters.year === "all"
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
-                  <option value="score">Score</option>
-                  <option value="problems">Problems Solved</option>
-                  <option value="contests">Contests</option>
+                  <option value="all">
+                    {filters.department === "all" || filters.year === "all"
+                      ? "Select Dept & Year first"
+                      : "All Sections"}
+                  </option>
+                  {availableSections.map((s) => (
+                    <option key={s} value={s}>
+                      Section {s}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -317,26 +260,78 @@ const InteractiveDashboard = ({ data, title = "Interactive Analytics" }) => {
 
       {/* Chart Content */}
       <div className="p-6">
-        <ChartRenderer />
-
-        {/* Data Summary */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
-              {filteredData.length}
-            </div>
-            <div className="text-sm text-blue-600">Students</div>
+        {loading ? (
+          <div className="h-[400px] flex items-center justify-center text-gray-400">
+            Loading data...
           </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
+        ) : chartData.length > 0 ? (
+          <div className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={false} />
+                <YAxis yAxisId="left" orientation="left" stroke="#3B82F6" />
+                <YAxis yAxisId="right" orientation="right" stroke="#10B981" />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Legend />
+                <Bar
+                  yAxisId="left"
+                  dataKey="score"
+                  fill="#3B82F6"
+                  name="Total Score"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="totalSolved"
+                  stroke="#10B981"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name="Questions Solved"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-[400px] flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+            <p>No data found for selected filters</p>
+          </div>
+        )}
+
+        {/* Data Summary Footer */}
+        <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p className="text-gray-500 text-sm">Students Found</p>
+            <p className="text-xl font-bold text-gray-900">
+              {chartData.length}
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm">Avg Score</p>
+            <p className="text-xl font-bold text-blue-600">
               {Math.round(
-                chartData.reduce((sum, item) => sum + item.score, 0) /
-                  chartData.length
-              ) || 0}
-            </div>
-            <div className="text-sm text-green-600">Avg Score</div>
+                chartData.reduce((acc, curr) => acc + curr.score, 0) /
+                  (chartData.length || 1)
+              )}
+            </p>
           </div>
-
+          <div>
+            <p className="text-gray-500 text-sm">Total Question Solved</p>
+            <p className="text-xl font-bold text-green-600">
+              {chartData.reduce((acc, curr) => acc + curr.totalSolved, 0)}
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -1,27 +1,44 @@
 import React, { useState, useEffect } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, BarChart, Bar
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
 } from "recharts";
 import {
-  FiServer, FiDatabase, FiWifi, FiCpu, FiHardDrive, FiActivity,
-  FiAlertTriangle, FiCheckCircle, FiXCircle, FiClock
+  FiServer,
+  FiDatabase,
+  FiWifi,
+  FiCpu,
+  FiHardDrive,
+  FiActivity,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiXCircle,
+  FiClock,
 } from "react-icons/fi";
 
 const SystemHealthMonitor = () => {
   const [healthData, setHealthData] = useState({
-    systemStatus: 'healthy',
-    uptime: '99.9%',
-    responseTime: 120,
-    activeConnections: 45,
-    databaseStatus: 'connected',
-    lastBackup: '2 hours ago',
-    errorRate: 0.1,
-    memoryUsage: 68,
-    cpuUsage: 45,
-    diskUsage: 72
+    systemStatus: "checking...",
+    uptime: "0s",
+    responseTime: 0,
+    activeConnections: 0,
+    databaseStatus: "unknown",
+    lastBackup: "unknown",
+    errorRate: 0,
+    memoryUsage: 0,
+    cpuUsage: 0,
+    diskUsage: 0,
   });
-  
+
   const [performanceHistory, setPerformanceHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
 
@@ -33,104 +50,94 @@ const SystemHealthMonitor = () => {
 
   const fetchSystemHealth = async () => {
     try {
-      // Simulate system health data - replace with actual API call
-      const mockData = {
-        systemStatus: Math.random() > 0.1 ? 'healthy' : 'warning',
-        uptime: (99.5 + Math.random() * 0.5).toFixed(1) + '%',
-        responseTime: Math.floor(100 + Math.random() * 100),
-        activeConnections: Math.floor(30 + Math.random() * 50),
-        databaseStatus: Math.random() > 0.05 ? 'connected' : 'slow',
-        lastBackup: Math.floor(Math.random() * 6) + ' hours ago',
-        errorRate: (Math.random() * 2).toFixed(2),
-        memoryUsage: Math.floor(50 + Math.random() * 40),
-        cpuUsage: Math.floor(20 + Math.random() * 60),
-        diskUsage: Math.floor(60 + Math.random() * 30)
-      };
-      
-      setHealthData(mockData);
-      
-      // Update performance history
-      const now = new Date();
-      const timeLabel = now.toLocaleTimeString('en-US', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const res = await fetch("/api/admin/analytics/system-health");
+      if (!res.ok) throw new Error("Health check failed");
+
+      const realData = await res.json();
+
+      setHealthData(realData);
+
+      // Create a time label for the chart
+      const timeLabel = new Date().toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       });
-      
-      setPerformanceHistory(prev => {
-        const newHistory = [...prev, {
-          time: timeLabel,
-          responseTime: mockData.responseTime,
-          cpuUsage: mockData.cpuUsage,
-          memoryUsage: mockData.memoryUsage,
-          activeConnections: mockData.activeConnections
-        }];
+
+      setPerformanceHistory((prev) => {
+        const newHistory = [
+          ...prev,
+          {
+            time: timeLabel,
+            responseTime: realData.responseTime,
+            activeConnections: realData.activeConnections,
+            memoryUsage: realData.memoryUsage, // Map memory to chart if needed
+          },
+        ];
         return newHistory.slice(-20); // Keep last 20 data points
       });
-      
-      // Generate alerts based on thresholds
+
+      // Clear old alerts and set new ones based on real thresholds
       const newAlerts = [];
-      if (mockData.cpuUsage > 80) {
+      if (realData.activeConnections > 150) {
+        newAlerts.push({
+          id: Date.now(),
+          type: "warning",
+          message: `High connection load: ${realData.activeConnections}`,
+          timestamp: timeLabel,
+        });
+      }
+      if (realData.responseTime > 500) {
         newAlerts.push({
           id: Date.now() + 1,
-          type: 'warning',
-          message: `High CPU usage: ${mockData.cpuUsage}%`,
-          timestamp: now.toLocaleString()
+          type: "error",
+          message: `Slow DB response: ${realData.responseTime}ms`,
+          timestamp: timeLabel,
         });
       }
-      if (mockData.memoryUsage > 85) {
-        newAlerts.push({
-          id: Date.now() + 2,
-          type: 'error',
-          message: `High memory usage: ${mockData.memoryUsage}%`,
-          timestamp: now.toLocaleString()
-        });
-      }
-      if (mockData.responseTime > 200) {
-        newAlerts.push({
-          id: Date.now() + 3,
-          type: 'warning',
-          message: `Slow response time: ${mockData.responseTime}ms`,
-          timestamp: now.toLocaleString()
-        });
-      }
-      
+
       if (newAlerts.length > 0) {
-        setAlerts(prev => [...newAlerts, ...prev].slice(0, 10));
+        setAlerts((prev) => [...newAlerts, ...prev].slice(0, 5));
       }
-      
     } catch (error) {
-      console.error('Failed to fetch system health:', error);
+      console.error("Failed to fetch system health:", error);
+      // Optional: Set visual error state
+      setHealthData((prev) => ({
+        ...prev,
+        systemStatus: "error",
+        databaseStatus: "disconnected",
+      }));
     }
   };
 
   const StatusIndicator = ({ status, label }) => {
     const getStatusColor = (status) => {
       switch (status) {
-        case 'healthy':
-        case 'connected':
-          return 'text-green-600 bg-green-100';
-        case 'warning':
-        case 'slow':
-          return 'text-yellow-600 bg-yellow-100';
-        case 'error':
-        case 'disconnected':
-          return 'text-red-600 bg-red-100';
+        case "healthy":
+        case "connected":
+          return "text-green-600 bg-green-100";
+        case "warning":
+        case "slow":
+          return "text-yellow-600 bg-yellow-100";
+        case "error":
+        case "disconnected":
+          return "text-red-600 bg-red-100";
         default:
-          return 'text-gray-600 bg-gray-100';
+          return "text-gray-600 bg-gray-100";
       }
     };
 
     const getStatusIcon = (status) => {
       switch (status) {
-        case 'healthy':
-        case 'connected':
+        case "healthy":
+        case "connected":
           return <FiCheckCircle className="w-4 h-4" />;
-        case 'warning':
-        case 'slow':
+        case "warning":
+        case "slow":
           return <FiAlertTriangle className="w-4 h-4" />;
-        case 'error':
-        case 'disconnected':
+        case "error":
+        case "disconnected":
           return <FiXCircle className="w-4 h-4" />;
         default:
           return <FiActivity className="w-4 h-4" />;
@@ -138,7 +145,11 @@ const SystemHealthMonitor = () => {
     };
 
     return (
-      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
+      <div
+        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+          status
+        )}`}
+      >
         {getStatusIcon(status)}
         <span className="ml-2">{label}</span>
       </div>
@@ -156,7 +167,8 @@ const SystemHealthMonitor = () => {
       <div>
         <h3 className="text-sm font-medium text-gray-600 mb-1">{title}</h3>
         <div className="text-2xl font-semibold text-gray-900">
-          {value}{unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
+          {value}
+          {unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
         </div>
       </div>
     </div>
@@ -213,54 +225,95 @@ const SystemHealthMonitor = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance History */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance History</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Performance History
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={performanceHistory}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="time" />
               <YAxis />
               <Tooltip />
-              <Line type="monotone" dataKey="responseTime" stroke="#3B82F6" strokeWidth={2} name="Response Time (ms)" />
-              <Line type="monotone" dataKey="activeConnections" stroke="#10B981" strokeWidth={2} name="Connections" />
+              <Line
+                type="monotone"
+                dataKey="responseTime"
+                stroke="#3B82F6"
+                strokeWidth={2}
+                name="Response Time (ms)"
+              />
+              <Line
+                type="monotone"
+                dataKey="activeConnections"
+                stroke="#10B981"
+                strokeWidth={2}
+                name="Connections"
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* System Resources */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">System Resources</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            System Resources
+          </h3>
           <div className="space-y-4">
-            <UsageBar 
-              label="CPU Usage" 
-              value={healthData.cpuUsage} 
-              color={healthData.cpuUsage > 80 ? "red" : healthData.cpuUsage > 60 ? "yellow" : "green"}
+            <UsageBar
+              label="CPU Usage"
+              value={healthData.cpuUsage}
+              color={
+                healthData.cpuUsage > 80
+                  ? "red"
+                  : healthData.cpuUsage > 60
+                  ? "yellow"
+                  : "green"
+              }
             />
-            <UsageBar 
-              label="Memory Usage" 
-              value={healthData.memoryUsage} 
-              color={healthData.memoryUsage > 85 ? "red" : healthData.memoryUsage > 70 ? "yellow" : "green"}
+            <UsageBar
+              label="Memory Usage"
+              value={healthData.memoryUsage}
+              color={
+                healthData.memoryUsage > 85
+                  ? "red"
+                  : healthData.memoryUsage > 70
+                  ? "yellow"
+                  : "green"
+              }
             />
-            <UsageBar 
-              label="Disk Usage" 
-              value={healthData.diskUsage} 
-              color={healthData.diskUsage > 90 ? "red" : healthData.diskUsage > 75 ? "yellow" : "green"}
+            <UsageBar
+              label="Disk Usage"
+              value={healthData.diskUsage}
+              color={
+                healthData.diskUsage > 90
+                  ? "red"
+                  : healthData.diskUsage > 75
+                  ? "yellow"
+                  : "green"
+              }
             />
           </div>
-          
+
           {/* Additional System Info */}
           <div className="mt-6 pt-4 border-t border-gray-200">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-500">Database:</span>
-                <StatusIndicator status={healthData.databaseStatus} label={healthData.databaseStatus} />
+                <StatusIndicator
+                  status={healthData.databaseStatus}
+                  label={healthData.databaseStatus}
+                />
               </div>
               <div>
                 <span className="text-gray-500">Last Backup:</span>
-                <span className="ml-2 font-medium">{healthData.lastBackup}</span>
+                <span className="ml-2 font-medium">
+                  {healthData.lastBackup}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500">Error Rate:</span>
-                <span className="ml-2 font-medium">{healthData.errorRate}%</span>
+                <span className="ml-2 font-medium">
+                  {healthData.errorRate}%
+                </span>
               </div>
             </div>
           </div>
@@ -269,15 +322,33 @@ const SystemHealthMonitor = () => {
 
       {/* Resource Usage Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resource Usage Over Time</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Resource Usage Over Time
+        </h3>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={performanceHistory}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="time" />
             <YAxis />
             <Tooltip />
-            <Area type="monotone" dataKey="cpuUsage" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name="CPU %" />
-            <Area type="monotone" dataKey="memoryUsage" stackId="2" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="Memory %" />
+            <Area
+              type="monotone"
+              dataKey="cpuUsage"
+              stackId="1"
+              stroke="#3B82F6"
+              fill="#3B82F6"
+              fillOpacity={0.6}
+              name="CPU %"
+            />
+            <Area
+              type="monotone"
+              dataKey="memoryUsage"
+              stackId="2"
+              stroke="#10B981"
+              fill="#10B981"
+              fillOpacity={0.6}
+              name="Memory %"
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -285,21 +356,33 @@ const SystemHealthMonitor = () => {
       {/* Alerts */}
       {alerts.length > 0 && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Alerts</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Recent Alerts
+          </h3>
           <div className="space-y-3">
-            {alerts.map(alert => (
-              <div key={alert.id} className={`p-4 rounded-lg border-l-4 ${
-                alert.type === 'error' ? 'bg-red-50 border-red-400' : 'bg-yellow-50 border-yellow-400'
-              }`}>
+            {alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`p-4 rounded-lg border-l-4 ${
+                  alert.type === "error"
+                    ? "bg-red-50 border-red-400"
+                    : "bg-yellow-50 border-yellow-400"
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    {alert.type === 'error' ? 
-                      <FiXCircle className="w-5 h-5 text-red-600 mr-3" /> : 
+                    {alert.type === "error" ? (
+                      <FiXCircle className="w-5 h-5 text-red-600 mr-3" />
+                    ) : (
                       <FiAlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
-                    }
-                    <span className="font-medium text-gray-900">{alert.message}</span>
+                    )}
+                    <span className="font-medium text-gray-900">
+                      {alert.message}
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-500">{alert.timestamp}</span>
+                  <span className="text-sm text-gray-500">
+                    {alert.timestamp}
+                  </span>
                 </div>
               </div>
             ))}
