@@ -15,6 +15,44 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
   const [promoteFromYear, setPromoteFromYear] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+  const [previewStudents, setPreviewStudents] = useState([]);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(null); // 'promote' or 'graduate'
+
+  const handleDeptChange = (val) => {
+    setSelectedDept(val);
+    setPreviewStudents([]);
+    setShowPreview(null);
+  };
+
+  const handleYearChange = (val) => {
+    setPromoteFromYear(val);
+    setPreviewStudents([]);
+    setShowPreview(null);
+  };
+
+  const handlePreview = async (type) => {
+    const year = type === "promote" ? promoteFromYear : "4";
+    if (!selectedDept || !year) {
+      alert("Please select both department and year.");
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    setStatus(null);
+    try {
+      const { data } = await axios.get("/api/hod/students", {
+        params: { dept: selectedDept, year: year },
+      });
+      setPreviewStudents(data);
+      setShowPreview(type);
+    } catch (err) {
+      console.error("Error fetching preview students:", err);
+      setStatus({ type: "error", message: "Failed to fetch student preview" });
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
 
   const handlePromote = async () => {
     if (!selectedDept || !promoteFromYear) {
@@ -24,7 +62,9 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
 
     if (
       !window.confirm(
-        `Are you sure you want to promote all active students in ${selectedDept} from Year ${promoteFromYear} to Year ${
+        `Are you sure you want to promote ${
+          previewStudents.length
+        } students in ${selectedDept} from Year ${promoteFromYear} to Year ${
           parseInt(promoteFromYear) + 1
         }?`
       )
@@ -40,6 +80,8 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
         fromYear: promoteFromYear,
       });
       setStatus({ type: "success", message: res.data.message });
+      setPreviewStudents([]);
+      setShowPreview(null);
     } catch (err) {
       setStatus({
         type: "error",
@@ -57,7 +99,7 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
 
     if (
       !window.confirm(
-        `Are you sure you want to mark all Year 4 students in ${selectedDept} as GRADUATED? This action is permanent.`
+        `Are you sure you want to mark ${previewStudents.length} Year 4 students in ${selectedDept} as GRADUATED? This action is permanent.`
       )
     ) {
       return;
@@ -70,6 +112,8 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
         dept: selectedDept,
       });
       setStatus({ type: "success", message: res.data.message });
+      setPreviewStudents([]);
+      setShowPreview(null);
     } catch (err) {
       setStatus({
         type: "error",
@@ -78,6 +122,52 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
     }
     setLoading(false);
   };
+
+  const StudentPreviewTable = ({ students }) => (
+    <div className="mt-6 border border-gray-100 rounded-xl overflow-hidden animate-fade-in">
+      <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+        <span className="text-sm font-bold text-gray-700">
+          Targeted Students ({students.length})
+        </span>
+      </div>
+      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50 sticky top-0">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Roll No
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Section
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {students.length > 0 ? (
+              students.map((s) => (
+                <tr key={s.student_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-2 font-medium text-gray-900">
+                    {s.student_id}
+                  </td>
+                  <td className="px-4 py-2 text-gray-600">{s.name}</td>
+                  <td className="px-4 py-2 text-gray-600">{s.section}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="3" className="px-4 py-6 text-center text-gray-400">
+                  No active students found matching these criteria.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-8 p-6 max-w-4xl mx-auto">
@@ -103,7 +193,7 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
             </label>
             <select
               value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
+              onChange={(e) => handleDeptChange(e.target.value)}
               disabled={!!fixedDept}
               className={`w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
                 fixedDept ? "opacity-70 cursor-not-allowed" : ""
@@ -124,7 +214,7 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
             </label>
             <select
               value={promoteFromYear}
-              onChange={(e) => setPromoteFromYear(e.target.value)}
+              onChange={(e) => handleYearChange(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             >
               <option value="">Select Year</option>
@@ -137,10 +227,30 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end">
+        {showPreview === "promote" && (
+          <StudentPreviewTable students={previewStudents} />
+        )}
+
+        <div className="mt-8 flex justify-end gap-3">
+          <button
+            onClick={() => handlePreview("promote")}
+            disabled={
+              loading || isPreviewLoading || !selectedDept || !promoteFromYear
+            }
+            className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
+          >
+            {isPreviewLoading && showPreview === "promote"
+              ? "Fetching..."
+              : "Preview Students"}
+          </button>
           <button
             onClick={handlePromote}
-            disabled={loading || !selectedDept || !promoteFromYear}
+            disabled={
+              loading ||
+              !selectedDept ||
+              !promoteFromYear ||
+              (showPreview === "promote" && previewStudents.length === 0)
+            }
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-100"
           >
             {loading ? "Processing..." : "Trigger Bulk Promotion"}
@@ -180,7 +290,7 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
               </label>
               <select
                 value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
+                onChange={(e) => handleDeptChange(e.target.value)}
                 disabled={!!fixedDept}
                 className={`w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all ${
                   fixedDept ? "opacity-70 cursor-not-allowed" : ""
@@ -195,15 +305,34 @@ const LifecycleManagement = ({ fixedDept = "" }) => {
               </select>
             </div>
 
-            <button
-              onClick={handleGraduate}
-              disabled={loading || !selectedDept}
-              className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-100 whitespace-nowrap"
-            >
-              {loading ? "Processing..." : "Process Graduation"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handlePreview("graduate")}
+                disabled={loading || isPreviewLoading || !selectedDept}
+                className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
+              >
+                {isPreviewLoading && showPreview === "graduate"
+                  ? "Fetching..."
+                  : "Preview Students"}
+              </button>
+              <button
+                onClick={handleGraduate}
+                disabled={
+                  loading ||
+                  !selectedDept ||
+                  (showPreview === "graduate" && previewStudents.length === 0)
+                }
+                className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-100 whitespace-nowrap"
+              >
+                {loading ? "Processing..." : "Process Graduation"}
+              </button>
+            </div>
           </div>
         </div>
+
+        {showPreview === "graduate" && (
+          <StudentPreviewTable students={previewStudents} />
+        )}
       </div>
 
       {status && (
