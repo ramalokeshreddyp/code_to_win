@@ -31,6 +31,7 @@ router.get("/profile", async (req, res) => {
     codechef_id, codechef_status, codechef_verified,
     geeksforgeeks_id, geeksforgeeks_status, geeksforgeeks_verified,
     hackerrank_id, hackerrank_status, hackerrank_verified,
+    github_id, github_status, github_verified,
     verified_by
    FROM student_coding_profiles
    WHERE student_id = ?`,
@@ -56,6 +57,7 @@ router.get("/profile", async (req, res) => {
     const isCodechefAccepted = coding_profiles?.codechef_id;
     const isGfgAccepted = coding_profiles?.geeksforgeeks_id;
     const isHackerrankAccepted = coding_profiles?.hackerrank_id;
+    const isGithubAccepted = coding_profiles?.github_id;
 
     const totalSolved =
       (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -101,6 +103,10 @@ router.get("/profile", async (req, res) => {
         badgesList: isHackerrankAccepted
           ? JSON.parse(p.badgesList_hr || "[]")
           : [],
+      },
+      github: {
+        repos: isGithubAccepted ? p.repos_gh : 0,
+        contributions: isGithubAccepted ? p.contributions_gh : 0,
       },
     };
     logger.info(`Student profile fetched for userId: ${userId}`);
@@ -189,8 +195,14 @@ router.put("/change-password", async (req, res) => {
 
 // POST /student/coding-profile
 router.post("/coding-profile", async (req, res) => {
-  const { userId, leetcode_id, codechef_id, geeksforgeeks_id, hackerrank_id } =
-    req.body;
+  const {
+    userId,
+    leetcode_id,
+    codechef_id,
+    geeksforgeeks_id,
+    hackerrank_id,
+    github_id,
+  } = req.body;
   logger.info(`Submitting coding profiles: userId=${userId}`);
   try {
     // Check verification requirement
@@ -257,6 +269,16 @@ router.post("/coding-profile", async (req, res) => {
       if (hackerrank_id && !verificationRequired)
         scrapeTasks.push({ platform: "hackerrank", username: hackerrank_id });
     }
+    if (github_id !== undefined) {
+      fields.push(
+        "github_id = ?",
+        `github_status = '${status}'`,
+        `github_verified = ${verified}`
+      );
+      values.push(github_id);
+      if (github_id && !verificationRequired)
+        scrapeTasks.push({ platform: "github", username: github_id });
+    }
 
     if (existing.length > 0) {
       if (fields.length > 0) {
@@ -275,8 +297,9 @@ router.post("/coding-profile", async (req, res) => {
          (student_id, leetcode_id, leetcode_status, leetcode_verified,
           codechef_id, codechef_status, codechef_verified,
           geeksforgeeks_id, geeksforgeeks_status, geeksforgeeks_verified,
-          hackerrank_id, hackerrank_status, hackerrank_verified)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          hackerrank_id, hackerrank_status, hackerrank_verified,
+          github_id, github_status, github_verified)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId,
           leetcode_id || null,
@@ -289,6 +312,9 @@ router.post("/coding-profile", async (req, res) => {
           status,
           verified,
           hackerrank_id || null,
+          status,
+          verified,
+          github_id || null,
           status,
           verified,
         ]
@@ -347,7 +373,7 @@ router.post("/refresh-coding-profiles", async (req, res) => {
   logger.info(`Refreshing coding profiles for userId: ${userId}`);
   try {
     const [profiles] = await db.query(
-      `SELECT leetcode_id, leetcode_status, codechef_id, codechef_status, geeksforgeeks_id, geeksforgeeks_status, hackerrank_id, hackerrank_status
+      `SELECT leetcode_id, leetcode_status, codechef_id, codechef_status, geeksforgeeks_id, geeksforgeeks_status, hackerrank_id, hackerrank_status, github_id, github_status
        FROM student_coding_profiles WHERE student_id = ?`,
       [userId]
     );
@@ -409,6 +435,17 @@ router.post("/refresh-coding-profiles", async (req, res) => {
           "hackerrank",
           profile.hackerrank_id
         ).catch((err) => logger.error(`[REFRESH] HackerRank: ${err.message}`))
+      );
+    }
+    if (
+      profile.github_id &&
+      (profile.github_status === "accepted" ||
+        profile.github_status === "suspended")
+    ) {
+      tasks.push(
+        scrapeAndUpdatePerformance(userId, "github", profile.github_id).catch(
+          (err) => logger.error(`[REFRESH] GitHub: ${err.message}`)
+        )
       );
     }
 

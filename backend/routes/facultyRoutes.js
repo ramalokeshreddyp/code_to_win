@@ -105,7 +105,7 @@ router.get("/students", async (req, res) => {
         [student.student_id]
       );
       const [codingProfiles] = await db.query(
-        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status FROM student_coding_profiles WHERE student_id = ?`,
+        `SELECT leetcode_id, leetcode_status, codechef_id, codechef_status, geeksforgeeks_status, hackerrank_status, github_status FROM student_coding_profiles WHERE student_id = ?`,
         [student.student_id]
       );
 
@@ -115,10 +115,11 @@ router.get("/students", async (req, res) => {
         const p = perfRows[0];
         const cp = codingProfiles[0] || {};
 
-        const isLeetcodeAccepted = cp.leetcode_id;
-        const isCodechefAccepted = cp.codechef_id;
-        const isGfgAccepted = cp.geeksforgeeks_id;
-        const isHackerrankAccepted = cp.hackerrank_id;
+        const isLeetcodeAccepted = cp.leetcode_status === "accepted";
+        const isCodechefAccepted = cp.codechef_status === "accepted";
+        const isGfgAccepted = cp.geeksforgeeks_status === "accepted";
+        const isHackerrankAccepted = cp.hackerrank_status === "accepted";
+        const isGithubAccepted = cp.github_status === "accepted";
 
         const totalSolved =
           (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -165,6 +166,10 @@ router.get("/students", async (req, res) => {
             badgesList: isHackerrankAccepted
               ? JSON.parse(p.badgesList_hr || "[]")
               : [],
+          },
+          github: {
+            repos: isGithubAccepted ? p.repos_gh : 0,
+            contributions: isGithubAccepted ? p.contributions_gh : 0,
           },
         };
 

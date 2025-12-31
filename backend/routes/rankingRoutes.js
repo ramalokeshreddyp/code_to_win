@@ -33,6 +33,8 @@ router.get("/overall", async (req, res) => {
       return `CASE WHEN COALESCE(cp.geeksforgeeks_status, '') = 'accepted' THEN p.${metric} ELSE 0 END`;
     if (metric.includes("_hr"))
       return `CASE WHEN COALESCE(cp.hackerrank_status, '') = 'accepted' THEN p.${metric} ELSE 0 END`;
+    if (metric.includes("_gh"))
+      return `CASE WHEN COALESCE(cp.github_status, '') = 'accepted' THEN p.${metric} ELSE 0 END`;
     return match;
   })} AS score
 FROM student_profiles sp
@@ -68,7 +70,7 @@ LIMIT ?`,
         [student.student_id]
       );
       const [codingProfiles] = await db.query(
-        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status FROM student_coding_profiles WHERE student_id = ?`,
+        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status, github_status FROM student_coding_profiles WHERE student_id = ?`,
         [student.student_id]
       );
 
@@ -80,6 +82,7 @@ LIMIT ?`,
         const isCodechefAccepted = cp.codechef_status === "accepted";
         const isGfgAccepted = cp.geeksforgeeks_status === "accepted";
         const isHackerrankAccepted = cp.hackerrank_status === "accepted";
+        const isGithubAccepted = cp.github_status === "accepted";
 
         const totalSolved =
           (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -129,6 +132,10 @@ LIMIT ?`,
             badgesList: isHackerrankAccepted
               ? JSON.parse(p.badgesList_hr || "[]")
               : [],
+          },
+          github: {
+            repos: isGithubAccepted ? p.repos_gh : 0,
+            contributions: isGithubAccepted ? p.contributions_gh : 0,
           },
         };
 
@@ -187,6 +194,8 @@ router.get("/filter", async (req, res) => {
       return `CASE WHEN COALESCE(cp.geeksforgeeks_status, '') = 'accepted' THEN p.${metric} ELSE 0 END`;
     if (metric.includes("_hr"))
       return `CASE WHEN COALESCE(cp.hackerrank_status, '') = 'accepted' THEN p.${metric} ELSE 0 END`;
+    if (metric.includes("_gh"))
+      return `CASE WHEN COALESCE(cp.github_status, '') = 'accepted' THEN p.${metric} ELSE 0 END`;
     return match;
   })} AS score
 FROM student_profiles sp
@@ -213,7 +222,7 @@ LIMIT ?`,
         [student.student_id]
       );
       const [codingProfiles] = await db.query(
-        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status FROM student_coding_profiles WHERE student_id = ?`,
+        `SELECT leetcode_status, codechef_status, geeksforgeeks_status, hackerrank_status, github_status FROM student_coding_profiles WHERE student_id = ?`,
         [student.student_id]
       );
 
@@ -225,6 +234,7 @@ LIMIT ?`,
         const isCodechefAccepted = cp.codechef_status === "accepted";
         const isGfgAccepted = cp.geeksforgeeks_status === "accepted";
         const isHackerrankAccepted = cp.hackerrank_status === "accepted";
+        const isGithubAccepted = cp.github_status === "accepted";
 
         const totalSolved =
           (isLeetcodeAccepted ? p.easy_lc + p.medium_lc + p.hard_lc : 0) +
@@ -271,6 +281,10 @@ LIMIT ?`,
             badgesList: isHackerrankAccepted
               ? JSON.parse(p.badgesList_hr || "[]")
               : [],
+          },
+          github: {
+            repos: isGithubAccepted ? p.repos_gh : 0,
+            contributions: isGithubAccepted ? p.contributions_gh : 0,
           },
         };
 

@@ -123,6 +123,7 @@ const AdminAnalyticsDashboard = () => {
       { name: "CodeChef", active: 0, total: 0 },
       { name: "GeeksforGeeks", active: 0, total: 0 },
       { name: "HackerRank", active: 0, total: 0 },
+      { name: "GitHub", active: 0, total: 0 },
     ];
 
     analyticsData.rankings?.forEach((student) => {
@@ -149,6 +150,9 @@ const AdminAnalyticsDashboard = () => {
         }
         if (perf.hackerrank?.badges > 0) {
           platformUsage[3].active++;
+        }
+        if (perf.github?.repos > 0) {
+          platformUsage[4].active++;
         }
       }
     });
@@ -410,6 +414,11 @@ const AdminAnalyticsDashboard = () => {
                         {student.performance?.platformWise?.hackerrank && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
                             HR
+                          </span>
+                        )}
+                        {student.performance?.platformWise?.github && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                            GH
                           </span>
                         )}
                       </div>

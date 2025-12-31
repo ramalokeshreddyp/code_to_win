@@ -160,6 +160,19 @@ const ViewProfile = ({ student, onClose }) => {
                   .join(", "),
               }}
             />
+            {student?.performance?.platformWise?.github?.repos > 0 && (
+              <PlatformCard
+                name="GitHub"
+                icon="https://cdn-icons-png.flaticon.com/512/25/25231.png"
+                color=" hover:text-black hover:shadow-black"
+                total={student?.performance?.platformWise?.github?.repos}
+                subtitle="Public Repositories"
+                breakdown={{
+                  "Total Contributions":
+                    student?.performance?.platformWise?.github?.contributions,
+                }}
+              />
+            )}
           </div>
         </div>
 

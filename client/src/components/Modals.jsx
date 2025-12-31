@@ -909,11 +909,12 @@ export function EditModal({ onClose, user, onSuccess, adminView = false }) {
     const payload = { userId: user.student_id };
     if (form.name !== savedData.name) payload.name = form.name;
     if (form.email !== savedData.email) payload.email = form.email;
-    
+
     if (adminView) {
       if (form.year !== savedData.year) payload.year = form.year;
       if (form.section !== savedData.section) payload.section = form.section;
-      if (form.dept_code !== savedData.dept_code) payload.dept_code = form.dept_code;
+      if (form.dept_code !== savedData.dept_code)
+        payload.dept_code = form.dept_code;
       if (form.degree !== savedData.degree) payload.degree = form.degree;
     }
 
@@ -925,7 +926,9 @@ export function EditModal({ onClose, user, onSuccess, adminView = false }) {
     }
 
     try {
-      const endpoint = adminView ? "/api/admin/update-student" : "/api/student/update-profile";
+      const endpoint = adminView
+        ? "/api/admin/update-student"
+        : "/api/student/update-profile";
       const response = await fetch(endpoint, {
         method: adminView ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
@@ -984,7 +987,7 @@ export function EditModal({ onClose, user, onSuccess, adminView = false }) {
             className="flex-1 border border-gray-300 rounded px-2 py-1 w-full focus:ring-2 focus:ring-blue-600 focus:outline-0"
             placeholder="Email"
           />
-          
+
           {adminView ? (
             <>
               <select
@@ -1036,7 +1039,6 @@ export function EditModal({ onClose, user, onSuccess, adminView = false }) {
                 <option value="B.Tech">B.Tech</option>
                 <option value="MCA">MCA</option>
               </select>
-
             </>
           ) : (
             <>
@@ -1100,6 +1102,7 @@ const optionList = [
   { label: "CodeChef", key: "codechef" },
   { label: "GeeksforGeeks", key: "geeksforgeeks" },
   { label: "HackerRank", key: "hackerrank" },
+  { label: "GitHub", key: "github" },
 ];
 
 export function UpdateProfileModal({ onClose, onSuccess, user }) {

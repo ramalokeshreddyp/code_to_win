@@ -72,9 +72,17 @@ const metricToPlatform = {
   badges_lc: "LeetCode",
   contests_lc: "LeetCode",
   contests_gfg: "GeeksforGeeks",
+  repos_gh: "GitHub",
+  contributions_gh: "GitHub",
 };
 
-const platformOrder = ["LeetCode", "GeeksforGeeks", "CodeChef", "HackerRank"];
+const platformOrder = [
+  "LeetCode",
+  "GeeksforGeeks",
+  "CodeChef",
+  "HackerRank",
+  "GitHub",
+];
 
 // Verification Toggle Component for SA07
 function VerificationToggle() {
@@ -197,6 +205,8 @@ function AdminDashboard() {
     medium_lc: "LeetCode Medium",
     badges_lc: "LeetCode Badges",
     contests_lc: "LeetCode Contests",
+    repos_gh: "GitHub Repositories",
+    contributions_gh: "GitHub Contributions",
   };
   useEffect(() => {
     const fetchGrading = async () => {

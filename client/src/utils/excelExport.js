@@ -19,6 +19,9 @@ export const exportStudentsToExcel = (students, filename = "students") => {
     )
       .map((b) => `${b.name}: ${b.stars}★`)
       .join(", "),
+    "GitHub Repos": student.performance?.platformWise?.github?.repos || 0,
+    "GitHub Contribs":
+      student.performance?.platformWise?.github?.contributions || 0,
     "Last Updated": student.performance?.combined?.last_updated || "N/A",
   }));
 

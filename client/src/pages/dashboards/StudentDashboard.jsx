@@ -408,6 +408,20 @@ const StudentDashboard = () => {
                   }}
                 />
               )}
+              {currentUser.coding_profiles?.github_id && (
+                <PlatformCard
+                  name="GitHub"
+                  color=" hover:text-black hover:shadow-black"
+                  icon="https://cdn-icons-png.flaticon.com/512/25/25231.png"
+                  ani="fade-up"
+                  total={currentUser.performance.platformWise.github.repos}
+                  subtitle="Public Repositories"
+                  breakdown={{
+                    "Total Contributions":
+                      currentUser.performance.platformWise.github.contributions,
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>

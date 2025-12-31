@@ -38,8 +38,11 @@ async function generateStudentExcel() {
         scp.hackerrank_id,
         scp.codechef_id,
         scp.geeksforgeeks_id,
+        scp.github_id,
         perf.stars_hr,
-        perf.badgesList_hr
+        perf.badgesList_hr,
+        perf.repos_gh,
+        perf.contributions_gh
       FROM 
         student_profiles sp
       JOIN 
@@ -93,6 +96,9 @@ async function generateStudentExcel() {
       { header: "HackerRank Badges", key: "hackerrank_badges", width: 40 },
       { header: "CodeChef", key: "codechef_id", width: 20 },
       { header: "GeeksForGeeks", key: "geeksforgeeks_id", width: 20 },
+      { header: "GitHub ID", key: "github_id", width: 20 },
+      { header: "GitHub Repos", key: "repos_gh", width: 15 },
+      { header: "GitHub Contribs", key: "contributions_gh", width: 15 },
     ];
 
     // Add style to header row

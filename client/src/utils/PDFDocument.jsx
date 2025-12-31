@@ -134,6 +134,7 @@ const PDFDocument = ({ student }) => {
   const gfg = student?.performance?.platformWise?.gfg || {};
   const codechef = student?.performance?.platformWise?.codechef || {};
   const hackerrank = student?.performance?.platformWise?.hackerrank || {};
+  const github = student?.performance?.platformWise?.github || {};
 
   return (
     <Document>
@@ -247,6 +248,17 @@ const PDFDocument = ({ student }) => {
               {(hackerrank.badgesList || [])
                 .map((b) => `${b.name}: ${b.stars}★`)
                 .join(", ")}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statsCard}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>GitHub</Text>
+            <Text style={styles.statValue}>{github.repos || 0}</Text>
+            <Text style={styles.statLabel}>Public Repositories</Text>
+            <Text style={styles.breakdown}>
+              Total Contributions: {github.contributions || 0}
             </Text>
           </View>
         </View>

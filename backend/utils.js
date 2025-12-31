@@ -76,7 +76,9 @@ const safeRequest = async (url, options = {}) => {
 
     return response;
   } catch (error) {
-    logger.error(`Request failed for ${url}: ${JSON.stringify(error, null, 2)}`);
+    logger.error(
+      `Request failed for ${url}: ${JSON.stringify(error, null, 2)}`
+    );
     return null;
   }
 };
@@ -104,6 +106,8 @@ const extractUsername = (url) => {
   } else if (url.includes("hackerrank.com")) {
     return parts[parts.length - 1];
   } else if (url.includes("geeksforgeeks.org")) {
+    return parts[parts.length - 1];
+  } else if (url.includes("github.com")) {
     return parts[parts.length - 1];
   }
 
