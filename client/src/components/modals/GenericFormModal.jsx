@@ -44,6 +44,7 @@ export default function GenericFormModal({
   icon,
   initialValues = {},
   inline = false, // New prop
+  isOpen = true, // Default to true for backward compatibility
 }) {
   const [form, setForm] = useState(initialValues);
 
@@ -177,6 +178,8 @@ export default function GenericFormModal({
   if (inline) {
     return content;
   }
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">

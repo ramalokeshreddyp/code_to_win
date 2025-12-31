@@ -10,3 +10,4 @@ export { default as BulkImportModal } from "./modals/BulkImportModal";
 export { default as EditModal } from "./modals/EditProfileModal";
 export { default as UpdateProfileModal } from "./modals/UpdateProfileModal";
 export { default as UserResetPasswordModal } from "./modals/ChangePasswordModal";
+export { default as AddAdminModal } from "./modals/AddAdminModal";

@@ -29,6 +29,7 @@ const ContactRequests = lazy(() =>
 const FacultyList = lazy(() => import("../../components/ui/FacultyList"));
 const HODList = lazy(() => import("../../components/ui/HODList"));
 const StudentTable = lazy(() => import("../../components/ui/StudentTable"));
+const AdminList = lazy(() => import("../../components/ui/AdminList"));
 const AddFacultyModal = lazy(() =>
   import("../../components/Modals").then((m) => ({
     default: m.AddFacultyModal,
@@ -61,6 +62,9 @@ const LifecycleManagement = lazy(() =>
 );
 const BatchSectionConfig = lazy(() =>
   import("../../components/ui/BatchSectionConfig")
+);
+const AddAdminModal = lazy(() =>
+  import("../../components/modals/AddAdminModal")
 );
 
 const metricToPlatform = {
@@ -205,6 +209,9 @@ function AdminDashboard() {
     { key: "Lifecycle", label: "Student Lifecycle", icon: <FiTrendingUp /> },
     { key: "SectionConfig", label: "Section Config", icon: <FiSettings /> },
     { key: "ExportData", label: "Export Data", icon: <FiDownload /> },
+    ...(currentUser.user_id === "SA07" || currentUser.user_id === "ADMIN"
+      ? [{ key: "AdminList", label: "Admin List", icon: <FiUserCheck /> }]
+      : []),
   ];
 
   // Helper to make metric names readable
@@ -596,6 +603,13 @@ function AdminDashboard() {
             {selectedTab === "SectionConfig" && (
               <Suspense fallback={<LoadingSpinner />}>
                 <BatchSectionConfig />
+              </Suspense>
+            )}
+
+            {/* Admin List - SA07 only */}
+            {selectedTab === "AdminList" && currentUser.user_id === "SA07" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminList />
               </Suspense>
             )}
 
