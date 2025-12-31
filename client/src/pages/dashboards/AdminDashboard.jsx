@@ -103,7 +103,6 @@ const platformOrder = [
   "GeeksforGeeks",
   "CodeChef",
   "HackerRank",
-  "HackerRank",
   "GitHub",
   "Achievements",
 ];
