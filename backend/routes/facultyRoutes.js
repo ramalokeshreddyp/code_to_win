@@ -27,17 +27,31 @@ router.get("/profile", async (req, res) => {
       [userId]
     );
 
-    const [[{ total_students }]] = await db.query(
-      "SELECT COUNT(*) AS total_students FROM student_profiles WHERE dept_code = ? AND year = ? AND section = ?",
-      [
-        profileResult[0].dept_code,
-        assignedSections[0].year,
-        assignedSections[0].section,
-      ]
-    );
+    let total_students = 0;
+
+    if (assignedSections.length > 0) {
+      // Build query to count students in all assigned sections
+      const conditions = assignedSections
+        .map(() => "(year = ? AND section = ?)")
+        .join(" OR ");
+      const params = [profileResult[0].dept_code];
+      assignedSections.forEach((a) => {
+        params.push(a.year, a.section);
+      });
+
+      const [[{ count }]] = await db.query(
+        `SELECT COUNT(*) AS count FROM student_profiles WHERE dept_code = ? AND (${conditions})`,
+        params
+      );
+      total_students = count;
+    }
 
     logger.info(`Faculty profile fetched for userId: ${userId}`);
-    res.json({ ...profileResult[0], ...assignedSections[0], total_students });
+    res.json({
+      ...profileResult[0],
+      assignments: assignedSections,
+      total_students,
+    });
   } catch (err) {
     logger.error(
       `Error fetching faculty profile for userId=${userId}: ${err.message}`
@@ -67,13 +81,25 @@ router.put("/profile", async (req, res) => {
   }
 });
 
-// GET /faculty/students?dept=CSE&year=3&section=A
+// GET /faculty/students
 router.get("/students", async (req, res) => {
-  const { dept, year, section } = req.query;
+  const { dept, year, section, userId, faculty_id } = req.query;
+  const fid = userId || faculty_id;
+
   logger.info(
-    `Fetching students: dept=${dept}, year=${year}, section=${section}`
+    `Fetching students for faculty=${fid}: dept=${dept}, year=${year}, section=${section}`
   );
+
   try {
+    let assignments = [];
+    if (fid) {
+      const [rows] = await db.query(
+        "SELECT year, section FROM faculty_section_assignment WHERE faculty_id = ?",
+        [fid]
+      );
+      assignments = rows;
+    }
+
     let query = `
       SELECT 
         sp.*, 
@@ -83,22 +109,34 @@ router.get("/students", async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
     if (dept) {
       query += " AND sp.dept_code = ?";
       params.push(dept);
     }
-    if (year) {
-      query += " AND sp.year = ?";
-      params.push(year);
-    }
-    if (section) {
-      query += " AND sp.section = ?";
-      params.push(section);
+
+    // MULTI-SECTION LOGIC
+    if (year && section) {
+      // Specific filter requested (frontend dropdown?)
+      query += " AND sp.year = ? AND sp.section = ?";
+      params.push(year, section);
+    } else if (assignments.length > 0) {
+      // Multi-section fetch
+      const orConditions = assignments
+        .map(() => "(sp.year = ? AND sp.section = ?)")
+        .join(" OR ");
+      query += ` AND (${orConditions})`;
+      assignments.forEach((a) => {
+        params.push(a.year, a.section);
+      });
+    } else {
+      // Fallback if no assignments found
+      if (!dept) return res.json([]);
     }
 
     const [students] = await db.query(query, params);
 
-    // Attach performance for each student
+    // Attach performance
     for (const student of students) {
       const [perfRows] = await db.query(
         `SELECT * FROM student_performance WHERE student_id = ?`,
@@ -188,20 +226,46 @@ router.get("/students", async (req, res) => {
   }
 });
 
-// GET /faculty/coding-profile-requests?dept=CSE&year=3&section=A
+// GET /faculty/coding-profile-requests
 router.get("/coding-profile-requests", async (req, res) => {
-  const { dept, year, section } = req.query;
+  const { dept, userId, faculty_id } = req.query;
+  const fid = userId || faculty_id;
+
   try {
-    const [requests] = await db.query(
-      `SELECT scp.*, sp.name, sp.year, sp.section, d.dept_name
+    let assignments = [];
+    if (fid) {
+      const [rows] = await db.query(
+        "SELECT year, section FROM faculty_section_assignment WHERE faculty_id = ?",
+        [fid]
+      );
+      assignments = rows;
+    }
+
+    if (assignments.length === 0) {
+      return res.json([]);
+    }
+
+    let query = `
+      SELECT scp.*, sp.name, sp.year, sp.section, d.dept_name
       FROM student_coding_profiles scp
       JOIN student_profiles sp ON scp.student_id = sp.student_id
       JOIN dept d ON sp.dept_code = d.dept_code
-      WHERE sp.dept_code = ? AND sp.year = ? AND sp.section = ?
-        AND (scp.leetcode_status = 'pending' OR scp.codechef_status = 'pending'
-             OR scp.geeksforgeeks_status = 'pending' OR scp.hackerrank_status = 'pending')`,
-      [dept, year, section]
-    );
+      WHERE sp.dept_code = ?
+      AND (scp.leetcode_status = 'pending' OR scp.codechef_status = 'pending'
+           OR scp.geeksforgeeks_status = 'pending' OR scp.hackerrank_status = 'pending')
+    `;
+
+    const params = [dept];
+
+    const orConditions = assignments
+      .map(() => "(sp.year = ? AND sp.section = ?)")
+      .join(" OR ");
+    query += ` AND (${orConditions})`;
+    assignments.forEach((a) => {
+      params.push(a.year, a.section);
+    });
+
+    const [requests] = await db.query(query, params);
     res.json(requests);
   } catch (err) {
     logger.error(`Error fetching coding profile requests: ${err.message}`);
@@ -248,7 +312,6 @@ router.post("/verify-coding-profile", async (req, res) => {
 router.get("/notifications", async (req, res) => {
   const { userId } = req.query;
   try {
-    // Check if verification is required
     const [settings] = await db.query(
       "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
     );
@@ -259,11 +322,11 @@ router.get("/notifications", async (req, res) => {
       return res.json([]);
     }
 
-    const [assignment] = await db.query(
+    const [assignments] = await db.query(
       "SELECT year, section FROM faculty_section_assignment WHERE faculty_id = ?",
       [userId]
     );
-    if (assignment.length === 0) return res.json([]);
+    if (assignments.length === 0) return res.json([]);
 
     const [faculty] = await db.query(
       "SELECT dept_code FROM faculty_profiles WHERE faculty_id = ?",
@@ -271,13 +334,24 @@ router.get("/notifications", async (req, res) => {
     );
     if (faculty.length === 0) return res.json([]);
 
+    const deptCode = faculty[0].dept_code;
+
+    const orConditions = assignments
+      .map(() => "(sp.year = ? AND sp.section = ?)")
+      .join(" OR ");
+    const params = [deptCode];
+    assignments.forEach((a) => {
+      params.push(a.year, a.section);
+    });
+
     const [pendingCount] = await db.query(
       `SELECT COUNT(*) as count FROM student_coding_profiles scp
        JOIN student_profiles sp ON scp.student_id = sp.student_id
-       WHERE sp.dept_code = ? AND sp.year = ? AND sp.section = ?
+       WHERE sp.dept_code = ? 
+       AND (${orConditions})
        AND (scp.leetcode_status = 'pending' OR scp.codechef_status = 'pending'
             OR scp.geeksforgeeks_status = 'pending' OR scp.hackerrank_status = 'pending')`,
-      [faculty[0].dept_code, assignment[0].year, assignment[0].section]
+      params
     );
 
     const count = pendingCount[0].count;

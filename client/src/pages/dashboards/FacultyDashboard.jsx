@@ -56,6 +56,9 @@ function FacultyDashboard() {
   const [selectedTab, setSelectedTab] = useState("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Section Filter State
+  const [sectionFilter, setSectionFilter] = useState("all");
+
   const menuItems = [
     { key: "Overview", label: "Overview", icon: <FiHome /> },
     {
@@ -77,8 +80,7 @@ function FacultyDashboard() {
       const { data } = await axios.get(`/api/faculty/students`, {
         params: {
           dept: currentUser?.dept_code,
-          year: currentUser?.year,
-          section: currentUser?.section,
+          userId: currentUser?.faculty_id,
         },
       });
       setStudents(data);
@@ -87,15 +89,33 @@ function FacultyDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.dept_code, currentUser?.year, currentUser?.section]);
+  }, [currentUser?.dept_code, currentUser?.faculty_id]);
 
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  const memoizedStudents = useMemo(() => students, [students]);
+  // Derived unique sections for the filter dropdown
+  const uniqueSections = useMemo(() => {
+    const options = new Set();
+    students.forEach((s) => {
+      // Ensure we only add valid year-section combos
+      if (s.year && s.section) {
+        options.add(`${s.year}-${s.section}`);
+      }
+    });
+    return Array.from(options).sort();
+  }, [students]);
 
-  // Calculate Class Stats
+  // Filter students based on selection
+  const filteredStudents = useMemo(() => {
+    if (sectionFilter === "all") return students;
+    const [fYear, fSection] = sectionFilter.split("-");
+    return students.filter((s) => s.year == fYear && s.section == fSection);
+  }, [students, sectionFilter]);
+
+  // Calculate Class Stats based on ALL students (not filtered) or filtered? usually all.
+  // Let's stick to ALL for the stats cards to show overall load.
   const classStats = useMemo(() => {
     if (!students.length) return { total: 0, avgScore: 0 };
     const total = students.length;
@@ -172,7 +192,11 @@ function FacultyDashboard() {
                       <p className="text-slate-300 text-lg">
                         Managing Class:{" "}
                         <span className="font-semibold text-white">
-                          {currentUser?.year}-{currentUser?.section}
+                          {currentUser?.assignments?.length > 0
+                            ? currentUser.assignments
+                                .map((a) => `${a.year}-${a.section}`)
+                                .join(", ")
+                            : `${currentUser?.year}-${currentUser?.section}`}
                         </span>{" "}
                         ({currentUser?.dept_code})
                       </p>
@@ -192,8 +216,8 @@ function FacultyDashboard() {
                       <button
                         onClick={() =>
                           exportStudentsToExcel(
-                            memoizedStudents,
-                            `faculty_students_${currentUser?.dept_code}_${currentUser?.year}_${currentUser?.section}`
+                            students, // Export ALL students from here if desired, or filtered
+                            `faculty_students_${currentUser?.dept_code}_All`
                           )
                         }
                         className="px-5 py-2.5 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-700 transition-all flex items-center gap-2"
@@ -218,7 +242,6 @@ function FacultyDashboard() {
                     value={classStats.avgScore}
                     color="success"
                   />
-                  {/* Placeholders for future stats */}
                   <StatsCard
                     icon={<FiCheckSquare />}
                     title="Pending Approvals"
@@ -261,7 +284,7 @@ function FacultyDashboard() {
 
                   {selectedTab === "StudentManagement" && (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                      <div className="flex justify-between items-center mb-6">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
                           <h2 className="text-xl font-bold text-gray-800">
                             Student Management
@@ -270,20 +293,42 @@ function FacultyDashboard() {
                             View and manage student profiles details
                           </p>
                         </div>
-                        {/* Button preserved in case they want it here too, or relying on Hero export */}
-                        <button
-                          onClick={() =>
-                            exportStudentsToExcel(
-                              memoizedStudents,
-                              `faculty_students_${currentUser?.dept_code}_${currentUser?.year}_${currentUser?.section}`
-                            )
-                          }
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                        >
-                          <FiDownload />
-                          Export Excel
-                        </button>
+
+                        <div className="flex flex-wrap gap-3 items-center">
+                          {/* DYNAMIC SECTION FILTER */}
+                          {uniqueSections.length > 1 && (
+                            <select
+                              className="border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              value={sectionFilter}
+                              onChange={(e) => setSectionFilter(e.target.value)}
+                            >
+                              <option value="all">
+                                All Sections ({students.length})
+                              </option>
+                              {uniqueSections.map((sec) => (
+                                <option key={sec} value={sec}>
+                                  Year {sec.split("-")[0]} - Sec{" "}
+                                  {sec.split("-")[1]}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          <button
+                            onClick={() =>
+                              exportStudentsToExcel(
+                                filteredStudents,
+                                `faculty_students_${currentUser?.dept_code}_Filtered`
+                              )
+                            }
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                          >
+                            <FiDownload />
+                            Export Excel
+                          </button>
+                        </div>
                       </div>
+
                       <Suspense
                         fallback={
                           <div className="py-10 text-center">
@@ -293,9 +338,9 @@ function FacultyDashboard() {
                       >
                         <div className="overflow-x-auto">
                           <StudentTable
-                            students={memoizedStudents}
+                            students={filteredStudents}
                             showBranch={true}
-                            showYear={false}
+                            showYear={true}
                             showSection={true}
                             onProfileClick={setSelectedStudent}
                           />
@@ -318,8 +363,7 @@ function FacultyDashboard() {
                         <Suspense fallback={<LoadingSpinner />}>
                           <CodingProfileRequests
                             dept={currentUser?.dept_code}
-                            year={currentUser?.year}
-                            section={currentUser?.section}
+                            userId={currentUser?.faculty_id}
                             facultyId={currentUser?.faculty_id}
                           />
                         </Suspense>
