@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
-import { FiUser, FiLock, FiEye, FiEyeOff, FiUserCheck } from "react-icons/fi";
+import { useNavigate, Navigate, Link } from "react-router-dom";
+import {
+  FiUser,
+  FiMail,
+  FiHash,
+  FiBriefcase,
+  FiMonitor,
+  FiCheckCircle,
+  FiChevronRight,
+  FiChevronLeft,
+  FiChevronDown,
+  FiAward,
+  FiCode,
+  FiSettings,
+  FiArrowRight,
+} from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useMeta } from "../context/MetaContext";
-import { UpdateProfileModal } from "../components/Modals";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -16,7 +30,7 @@ const Register = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [err, setErr] = useState(null);
   const { currentUser } = useAuth();
-  // Form data
+
   const [formData, setFormData] = useState({
     stdId: "",
     name: "",
@@ -52,7 +66,6 @@ const Register = () => {
     }
   }, [formData.dept, formData.year]);
 
-  // Handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -63,22 +76,24 @@ const Register = () => {
       return newData;
     });
   };
+
   const handleNext = () => {
     if (step === 1) {
       if (
-        formData.stdId === "" ||
-        formData.name === "" ||
-        formData.email === ""
+        !formData.stdId ||
+        !formData.name ||
+        !formData.email ||
+        !formData.gender
       ) {
         setErr("Please fill all fields in Step 1");
         return;
       }
     } else if (step === 2) {
       if (
-        formData.degree === "" ||
-        formData.dept === "" ||
-        formData.year === "" ||
-        formData.section === ""
+        !formData.degree ||
+        !formData.dept ||
+        !formData.year ||
+        !formData.section
       ) {
         setErr("Please fill all fields in Step 2");
         return;
@@ -87,26 +102,32 @@ const Register = () => {
     setErr(null);
     setStep(step + 1);
   };
+
   const handlePrevious = () => setStep(step - 1);
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setIsSubmitting(true);
     setErr(null);
-    if (
-      formData.leetcode === "" &&
-      formData.hackerrank === "" &&
-      formData.geeksforgeeks === "" &&
-      formData.codechef === ""
-    ) {
-      setErr("Please fill at least one field in Step 3");
+
+    const hasPlatform =
+      formData.leetcode ||
+      formData.hackerrank ||
+      formData.geeksforgeeks ||
+      formData.codechef;
+    if (!hasPlatform) {
+      setErr("Please provide at least one coding profile ID.");
+      setIsSubmitting(false);
       return;
     }
+
     try {
       const result = await fetch(`/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formData }),
       });
+
       if (!result.ok) {
         const errorData = await result.json();
         setErr(errorData.message);
@@ -115,8 +136,8 @@ const Register = () => {
 
       setStep("complete");
     } catch (error) {
-      console.error("Login error:", error);
-      setErr(result.message);
+      console.error("Registration error:", error);
+      setErr("Connection failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -125,223 +146,275 @@ const Register = () => {
   if (currentUser) {
     return <Navigate to={`/${currentUser.role}`} replace />;
   }
+
+  const InputWrapper = ({ icon: Icon, label, children }) => (
+    <div className="mb-5">
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
+        {label}
+      </label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <Icon size={18} />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" },
+    },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
+  };
+
+  const stepItems = [
+    { label: "Personal", icon: <FiUser /> },
+    { label: "Academic", icon: <FiBriefcase /> },
+    { label: "Profiles", icon: <FiCode /> },
+  ];
+
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
       <Navbar />
-      <div className="min-h-[80vh] flex flex-col items-center justify-center py-10">
-        <div className="w-full max-w-[90%] md:max-w-[70%] bg-white border flex border-gray-100 shadow rounded-xl">
-          <div className="hidden lg:flex flex-1/2 ">
-            <img
-              src="/reg.jpg"
-              alt="registration"
-              className="w-full h-auto max-h-[800px] object-cover rounded-l-xl"
-            />
-          </div>
-          {step === "complete" ? (
-            <div className="text-center flex-1/2 p-8 flex flex-col justify-center items-centers">
-              <div className="text-green-500 mb-4">
-                <svg
-                  className="mx-auto w-20 h-20"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl  mb-2">Registration Successful!</h2>
-              <p className="text-gray-600 mb-6">
-                Thank you. We'll process your data shortly and send you a mail
-                with your login details. If you did't receive mail, please
-                contact us.
-              </p>
-              <button
-                onClick={() => navi("/")}
-                className="py-2 px-6 rounded bg-gray-200 hover:bg-gray-300 text-gray-500 font-semibold"
-              >
-                Back to Home
-              </button>
-            </div>
-          ) : (
-            <div className="flex-1/2 p-8 flex flex-col justify-center items-center">
-              {isSubmitting ? (
-                <div className="flex justify-center items-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+
+      <main className="flex-grow flex items-center justify-center py-12 px-4 relative overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
+          <div className="absolute top-1/2 -right-24 w-80 h-80 bg-purple-100 rounded-full blur-3xl opacity-50"></div>
+        </div>
+
+        <div className="w-full max-w-2xl relative z-10">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden"
+          >
+            {step !== "complete" && (
+              <div className="pt-8 px-8">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
+                    Create Account
+                  </h1>
+                  <p className="text-gray-500">
+                    Join the ranking platform and track your growth
+                  </p>
                 </div>
-              ) : (
-                <>
-                  <div className="bg-blue-200 flex justify-center items-center w-30 h-30 p-4 rounded-full">
-                    <FiUserCheck className="text-blue-500 text-6xl" />
-                  </div>
-                  <h1 className="text-2xl font-semibold my-3">Sign Up</h1>
-                  {err && <p className="mt-3 text-red-500 text-sm">{err}</p>}
-                  <div className="mb-6 w-full">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-semibold text-gray-500">
-                        Step {step} of 3
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        {parseInt(((step - 1) / 3) * 100)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+
+                {/* Progress Indicator */}
+                <div className="flex justify-between items-center mb-10 relative px-4">
+                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
+                  {stepItems.map((item, idx) => {
+                    const stepNum = idx + 1;
+                    const isActive = step === stepNum;
+                    const isCompleted = step > stepNum;
+
+                    return (
                       <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{
-                          width: `${parseInt(((step - 1) / 3) * 100)}%`,
-                        }}
-                      ></div>
+                        key={idx}
+                        className="relative z-10 flex flex-col items-center"
+                      >
+                        <motion.div
+                          animate={{
+                            backgroundColor:
+                              isCompleted || isActive ? "#2563eb" : "#f1f5f9",
+                            scale: isActive ? 1.1 : 1,
+                            color: isCompleted || isActive ? "#fff" : "#94a3b8",
+                          }}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm transition-colors duration-300`}
+                        >
+                          {isCompleted ? <FiCheckCircle size={20} /> : stepNum}
+                        </motion.div>
+                        <span
+                          className={`mt-2 text-xs font-bold uppercase tracking-wider ${
+                            isActive ? "text-blue-600" : "text-gray-400"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {err && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-lg"
+                  >
+                    {err}
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            <div className="p-8 pt-2">
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-2"
+                  >
+                    <InputWrapper icon={FiHash} label="Student ID">
+                      <input
+                        type="text"
+                        name="stdId"
+                        value={formData.stdId}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            stdId: e.target.value
+                              .trim()
+                              .replace(/\s+/g, "")
+                              .toUpperCase(),
+                          })
+                        }
+                        placeholder="e.g. 22A91AXXXX"
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800 placeholder:text-gray-400"
+                      />
+                    </InputWrapper>
+
+                    <InputWrapper icon={FiUser} label="Full Name">
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="John Doe"
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800"
+                      />
+                    </InputWrapper>
+
+                    <InputWrapper icon={FiMail} label="Email Address">
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="john.doe@example.com"
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800"
+                      />
+                    </InputWrapper>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">
+                        Gender
+                      </label>
+                      <div className="flex gap-4">
+                        {["Male", "Female"].map((g) => (
+                          <label
+                            key={g}
+                            className={`flex-1 flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                              formData.gender === g
+                                ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
+                                : "bg-gray-50/50 border-gray-100 text-gray-500 hover:border-gray-200"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="gender"
+                              value={g}
+                              checked={formData.gender === g}
+                              onChange={handleChange}
+                              className="hidden"
+                            />
+                            {g}
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  </motion.div>
+                )}
 
-                  {step === 1 && (
-                    <>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500 text-base mb-1">
-                          Student ID
-                        </label>
-                        <input
-                          type="text"
-                          name="stdId"
-                          value={formData.stdId}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              stdId: e.target.value
-                                .trim()
-                                .replace(/\s+/g, "")
-                                .toUpperCase(),
-                            })
-                          }
-                          placeholder="22A91AXXXX"
-                          className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
-                        />
+                {step === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-4"
+                  >
+                    <InputWrapper icon={FiAward} label="Degree">
+                      <select
+                        name="degree"
+                        value={formData.degree}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-gray-800 appearance-none"
+                      >
+                        <option value="">Select Degree</option>
+                        <option value="MCA">
+                          Master of Computer Applications (MCA)
+                        </option>
+                        <option value="B.Tech.">
+                          Bachelor of Technology (B.Tech)
+                        </option>
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        <FiChevronDown />
                       </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500 mb-1">Name</label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
-                        />
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500 mb-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200  rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
-                        />
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          Gender
-                        </label>
-                        <div className="flex space-x-4 mt-2">
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              name="gender"
-                              value="Male"
-                              checked={formData.gender === "Male"}
-                              onChange={handleChange}
-                              className="form-radio h-4 w-4 text-blue-600"
-                            />
-                            <span className="ml-2 text-gray-500">Male</span>
-                          </label>
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              name="gender"
-                              value="Female"
-                              checked={formData.gender === "Female"}
-                              onChange={handleChange}
-                              className="form-radio h-4 w-4 text-blue-600"
-                            />
-                            <span className="ml-2 text-gray-500">Female</span>
-                          </label>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    </InputWrapper>
 
-                  {step === 2 && (
-                    <>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          Degree
-                        </label>
-                        <select
-                          name="degree"
-                          value={formData.degree}
-                          onChange={handleChange}
-                          className="w-full border border-gray-200 rounded px-3 py-2"
-                        >
-                          <option value="">Select</option>
-                          <option value="MCA">MCA</option>
-                          <option value="B.Tech.">B.Tech</option>
-                        </select>
+                    <InputWrapper icon={FiBriefcase} label="Department">
+                      <select
+                        name="dept"
+                        value={formData.dept}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-gray-800 appearance-none"
+                      >
+                        <option value="">Select Department</option>
+                        {depts.map((dept) => (
+                          <option key={dept.dept_code} value={dept.dept_code}>
+                            {dept.dept_name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        <FiChevronDown />
                       </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          Department
-                        </label>
-                        <select
-                          name="dept"
-                          onChange={handleChange}
-                          className="w-full border border-gray-300  hover:bg-blue-50 p-2 rounded-lg transition outline-none"
-                          value={formData.dept}
-                        >
-                          <option value="">Select</option>
-                          {depts.map((dept) => (
-                            <option key={dept.dept_code} value={dept.dept_code}>
-                              {dept.dept_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          Year
-                        </label>
+                    </InputWrapper>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InputWrapper icon={FiHash} label="Year">
                         <select
                           name="year"
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none"
                           value={formData.year}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-gray-800 appearance-none"
                         >
-                          <option value="">Select</option>
-                          {[1, 2, 3, 4].map((year) => (
-                            <option key={year} value={year}>
-                              {year}
+                          <option value="">Select Year</option>
+                          {[1, 2, 3, 4].map((y) => (
+                            <option key={y} value={y}>
+                              Year {y}
                             </option>
                           ))}
                         </select>
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          Section
-                        </label>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                          <FiChevronDown />
+                        </div>
+                      </InputWrapper>
+
+                      <InputWrapper icon={FiSettings} label="Section">
                         <select
                           name="section"
+                          value={formData.section}
                           onChange={handleChange}
                           disabled={loadingSections}
-                          className={`w-full border border-gray-300 hover:bg-blue-50 p-2 rounded-lg transition outline-none ${
-                            loadingSections ? "animate-pulse bg-gray-100" : ""
+                          className={`w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-gray-800 appearance-none ${
+                            loadingSections ? "bg-gray-100 opacity-70" : ""
                           }`}
-                          value={formData.section}
                         >
                           <option value="">
-                            {loadingSections ? "Loading..." : "Select"}
+                            {loadingSections ? "Loading..." : "Select Section"}
                           </option>
                           {sections.map((s) => (
                             <option key={s} value={s}>
@@ -349,104 +422,181 @@ const Register = () => {
                             </option>
                           ))}
                         </select>
-                      </div>
-                    </>
-                  )}
-                  {step === 3 && (
-                    <>
-                      <p className="text-sm font-semibold text-yellow-500 mb-2">
-                        NOTE: Enter only username. Don't enter the complete
-                        link.
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                          <FiChevronDown />
+                        </div>
+                      </InputWrapper>
+                    </div>
+                  </motion.div>
+                )}
+
+                {step === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-4"
+                  >
+                    <div className="bg-yellow-50/50 border border-yellow-100 rounded-xl p-4 mb-4">
+                      <p className="text-xs font-semibold text-yellow-700 flex items-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        >
+                          <FiSettings />
+                        </motion.div>
+                        PRO TIP: Enter only your username, not the complete URL.
                       </p>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          LeetCode ID
-                        </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputWrapper icon={FiCode} label="LeetCode ID">
                         <input
                           type="text"
                           name="leetcode"
                           value={formData.leetcode}
                           onChange={handleChange}
-                          placeholder="(eg: Aditya01)"
-                          className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600 "
+                          placeholder="e.g. aditya01"
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm"
                         />
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          HackerRank ID
-                        </label>
+                      </InputWrapper>
+
+                      <InputWrapper icon={FiMonitor} label="HackerRank ID">
                         <input
                           type="text"
                           name="hackerrank"
                           value={formData.hackerrank}
                           onChange={handleChange}
-                          placeholder="(eg: Aditya02)"
-                          className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
+                          placeholder="e.g. aditya02"
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm"
                         />
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          GeeksforGeeks ID
-                        </label>
+                      </InputWrapper>
+
+                      <InputWrapper icon={FiBriefcase} label="GFG ID">
                         <input
                           type="text"
                           name="geeksforgeeks"
                           value={formData.geeksforgeeks}
                           onChange={handleChange}
-                          placeholder="(eg: Aditya03)"
-                          className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
+                          placeholder="e.g. aditya03"
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm"
                         />
-                      </div>
-                      <div className="mb-4 w-full">
-                        <label className="block text-gray-500  mb-1">
-                          CodeChef ID
-                        </label>
+                      </InputWrapper>
+
+                      <InputWrapper icon={FiUser} label="CodeChef ID">
                         <input
                           type="text"
                           name="codechef"
                           value={formData.codechef}
                           onChange={handleChange}
-                          placeholder="(eg: Aditya04)"
-                          className="w-full border border-gray-200 rounded px-3 py-2 focus:ring-1 focus:outline-0 focus:ring-blue-600"
+                          placeholder="e.g. aditya04"
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm"
                         />
-                      </div>
-                    </>
+                      </InputWrapper>
+                    </div>
+                  </motion.div>
+                )}
+
+                {step === "complete" && (
+                  <motion.div
+                    key="complete"
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="text-center py-12 px-6"
+                  >
+                    <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 shadow-inner">
+                      <motion.div
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                      >
+                        <FiCheckCircle size={48} />
+                      </motion.div>
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                      Registration Sent!
+                    </h2>
+                    <p className="text-gray-600 mb-8 leading-relaxed max-w-sm mx-auto">
+                      Great work! We'll process your details shortly and send an
+                      email with your login credentials once verified.
+                    </p>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navi("/")}
+                      className="inline-flex items-center gap-2 py-3 px-10 rounded-2xl bg-gray-900 text-white font-bold hover:bg-gray-800 transition-all shadow-xl shadow-gray-200"
+                    >
+                      Back To Home
+                      <FiArrowRight />
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {step !== "complete" && (
+                <div className="flex items-center justify-between gap-4 pt-8 border-t border-gray-100 mt-8">
+                  {step > 1 ? (
+                    <button
+                      onClick={handlePrevious}
+                      disabled={isSubmitting}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-50 text-gray-500 font-bold hover:bg-gray-100 transition-all"
+                    >
+                      <FiChevronLeft />
+                      Back
+                    </button>
+                  ) : (
+                    <div />
                   )}
-                  {/* Buttons */}
-                  <div className="flex justify-between gap-4 mt-6">
-                    {step > 1 && (
-                      <button
-                        onClick={handlePrevious}
-                        className="py-2 px-6 rounded bg-gray-200 hover:bg-gray-300 text-gray-500 font-semibold"
-                      >
-                        Previous
-                      </button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={step === 3 ? handleSubmit : handleNext}
+                    disabled={isSubmitting}
+                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold shadow-lg transition-all ${
+                      step === 3
+                        ? "bg-green-600 text-white shadow-green-100 hover:bg-green-700"
+                        : "bg-blue-600 text-white shadow-blue-100 hover:bg-blue-700"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        {step === 3 ? "Complete Registration" : "Continue"}
+                        {step < 3 && <FiChevronRight />}
+                      </>
                     )}
-                    {step < 3 && (
-                      <button
-                        onClick={handleNext}
-                        className="py-2 px-6 rounded bg-blue-500 hover:bg-blue-600 text-white font-semibold ml-auto"
-                      >
-                        Next
-                      </button>
-                    )}
-                    {step === 3 && (
-                      <button
-                        onClick={handleSubmit}
-                        className="py-2 px-6 rounded bg-green-500 hover:bg-green-600 text-white font-semibold ml-auto"
-                      >
-                        Complete
-                      </button>
-                    )}
-                  </div>
-                </>
+                  </motion.button>
+                </div>
               )}
             </div>
-          )}
+
+            <div className="bg-gray-50/50 p-4 border-t border-gray-100 text-center">
+              <p className="text-sm text-gray-500">
+                Already have an account?{" "}
+                <Link
+                  to="/"
+                  className="text-blue-600 font-bold hover:underline"
+                >
+                  Sign In
+                </Link>
+              </p>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </main>
+
       <Footer />
-    </>
+    </div>
   );
 };
 
