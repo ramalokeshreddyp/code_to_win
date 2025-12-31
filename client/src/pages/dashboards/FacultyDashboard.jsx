@@ -26,6 +26,7 @@ import {
   FiUserCheck,
   FiUserPlus,
   FiDownload,
+  FiCheckSquare,
 } from "react-icons/fi";
 
 // Lazy-loaded components
@@ -38,6 +39,9 @@ const StudentTable = lazy(() => import("../../components/ui/StudentTable"));
 const BulkImportWithCP = lazy(() =>
   import("../../components/ui/BulkImportWithCP")
 );
+const FacultyApprovals = lazy(() =>
+  import("../../components/ui/FacultyApprovals")
+);
 
 function FacultyDashboard() {
   const { currentUser, logout } = useAuth();
@@ -49,13 +53,10 @@ function FacultyDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const menuItems = [
-    { key: "StudentRanking", label: "Student Ranking", icon: <FiBarChart2 /> },
-    { key: "StudentManagment", label: "Student Management", icon: <FiUsers /> },
-    {
-      key: "StudentRequests",
-      label: "Student Requests",
-      icon: <FiUserCheck />,
-    },
+    { key: "StudentRanking", label: "Ranking", icon: <FiBarChart2 /> },
+    { key: "StudentManagment", label: "Management", icon: <FiUsers /> },
+    { key: "StudentRequests", label: "Requests", icon: <FiUserCheck /> },
+    { key: "Approvals", label: "Approvals", icon: <FiCheckSquare /> },
     { key: "AddStudent", label: "Add Student", icon: <FiUserPlus /> },
   ];
 
@@ -138,7 +139,12 @@ function FacultyDashboard() {
                         </p>
                       </div>
                       <button
-                        onClick={() => exportStudentsToExcel(memoizedStudents, `faculty_students_${currentUser?.dept_code}_${currentUser?.year}_${currentUser?.section}`)}
+                        onClick={() =>
+                          exportStudentsToExcel(
+                            memoizedStudents,
+                            `faculty_students_${currentUser?.dept_code}_${currentUser?.year}_${currentUser?.section}`
+                          )
+                        }
                         className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                       >
                         <FiDownload />
@@ -171,18 +177,16 @@ function FacultyDashboard() {
                 {selectedTab === "StudentRequests" && (
                   <div className="bg-white p-2 md:p-6 rounded-lg shadow">
                     <h2 className="text-xl font-semibold mb-4">
-                      Student Requests
+                      Coding Profile Requests
                     </h2>
                     <p className="text-gray-500 mb-4">
-                      Review and manage student coding profile requests.
+                      Review and verify student coding platform connections.
                     </p>
                     <Suspense
                       fallback={
                         <>
                           <LoadingSpinner />
-                          <p className="text-center">
-                            Loading Student Requests...
-                          </p>
+                          <p className="text-center">Loading Requests...</p>
                         </>
                       }
                     >
@@ -194,6 +198,12 @@ function FacultyDashboard() {
                       />
                     </Suspense>
                   </div>
+                )}
+
+                {selectedTab === "Approvals" && (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <FacultyApprovals facultyId={currentUser?.faculty_id} />
+                  </Suspense>
                 )}
 
                 {selectedTab === "AddStudent" && (
@@ -261,6 +271,7 @@ function FacultyDashboard() {
                         <Suspense fallback={<LoadingSpinner />}>
                           <AddIndividualStudentModel
                             onSuccess={fetchStudents}
+                            inline={true}
                           />
                         </Suspense>
                       )}

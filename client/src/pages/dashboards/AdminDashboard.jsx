@@ -74,6 +74,12 @@ const metricToPlatform = {
   contests_gfg: "GeeksforGeeks",
   repos_gh: "GitHub",
   contributions_gh: "GitHub",
+  repos_gh: "GitHub",
+  contributions_gh: "GitHub",
+  certification_count: "Achievements",
+  hackathon_winner_count: "Achievements",
+  hackathon_participation_count: "Achievements",
+  workshop_count: "Achievements",
 };
 
 const platformOrder = [
@@ -81,7 +87,9 @@ const platformOrder = [
   "GeeksforGeeks",
   "CodeChef",
   "HackerRank",
+  "HackerRank",
   "GitHub",
+  "Achievements",
 ];
 
 // Verification Toggle Component for SA07
@@ -207,6 +215,12 @@ function AdminDashboard() {
     contests_lc: "LeetCode Contests",
     repos_gh: "GitHub Repositories",
     contributions_gh: "GitHub Contributions",
+    repos_gh: "GitHub Repositories",
+    contributions_gh: "GitHub Contributions",
+    certification_count: "Certifications",
+    hackathon_winner_count: "Hackathon - Winner",
+    hackathon_participation_count: "Hackathon - Participation",
+    workshop_count: "Workshops",
   };
   useEffect(() => {
     const fetchGrading = async () => {
@@ -698,15 +712,21 @@ function AdminDashboard() {
                   <div className="flex-1 p-6">
                     <Suspense fallback={<LoadingSpinner />}>
                       {userMgmtTab === "addStudent" && (
-                        <AddIndividualStudentModel />
+                        <AddIndividualStudentModel inline={true} />
                       )}
-                      {userMgmtTab === "addFaculty" && <AddFacultyModal />}
-                      {userMgmtTab === "addHOD" && <AddHODModal />}
+                      {userMgmtTab === "addFaculty" && (
+                        <AddFacultyModal inline={true} />
+                      )}
+                      {userMgmtTab === "addHOD" && (
+                        <AddHODModal inline={true} />
+                      )}
                       {userMgmtTab === "resetPassword" && (
                         <ResetPasswordModal />
                       )}
                       {userMgmtTab === "bulkImport" && <BulkImportModal />}
-                      {userMgmtTab === "addBranch" && <AddBranchModal />}
+                      {userMgmtTab === "addBranch" && (
+                        <AddBranchModal inline={true} />
+                      )}
                     </Suspense>
                   </div>
                 </div>

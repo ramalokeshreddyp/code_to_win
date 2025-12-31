@@ -38,6 +38,10 @@ app.use("/api/contact", require("./routes/contactRoutes"));
 app.use("/api/export", require("./routes/exportRoutes"));
 app.use("/api/download", require("./routes/downloadRoutes"));
 app.use("/api/", require("./routes/managementRoutes"));
+app.use("/api/achievements", require("./routes/achievementRoutes")); // Achievements
+
+// Serve uploaded files statically
+app.use("/uploads", express.static("uploads"));
 
 // Schedule: Every Saturday at 00:00 (midnight)
 cron.schedule("0 0 * * 6", async () => {
@@ -74,7 +78,7 @@ cron.schedule("*/5 * * * *", async () => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () =>
   console.log(`Server is running on http://localhost:${PORT}`)
 );

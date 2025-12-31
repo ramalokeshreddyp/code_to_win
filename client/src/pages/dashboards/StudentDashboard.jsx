@@ -9,6 +9,10 @@ import {
   FiAlertTriangle,
   FiHome,
   FiUser,
+  FiAward,
+  FiPlus,
+  FiTrash2,
+  FiExternalLink,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +26,7 @@ import {
   UpdateProfileModal,
   UserResetPasswordModal,
 } from "../../components/Modals";
+import AchievementModal from "../../components/modals/AchievementModal";
 import Footer from "../../components/Footer";
 
 const StudentDashboard = () => {
@@ -30,6 +35,8 @@ const StudentDashboard = () => {
   const [updateProfile, setUpdateProfile] = useState(false);
   const [changepassword, setChangepassword] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [achievements, setAchievements] = useState([]);
   const [selectedTab, setSelectedTab] = useState("Overview");
 
   const { currentUser, checkAuth, logout } = useAuth();
@@ -89,9 +96,51 @@ const StudentDashboard = () => {
     }
   };
 
+  const fetchAchievements = async () => {
+    try {
+      const res = await fetch(
+        `/api/achievements/my-achievements?studentId=${currentUser.student_id}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setAchievements(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch achievements", error);
+    }
+  };
+
+  React.useEffect(() => {
+    if (selectedTab === "Achievements") {
+      fetchAchievements();
+    }
+  }, [selectedTab]);
+
+  const handleDeleteAchievement = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this achievement?"))
+      return;
+    try {
+      const res = await fetch(
+        `/api/achievements/${id}?studentId=${currentUser.student_id}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (res.ok) {
+        toast.success("Achievement deleted");
+        fetchAchievements();
+      } else {
+        toast.error("Failed to delete");
+      }
+    } catch (err) {
+      toast.error("Error deleting achievement");
+    }
+  };
+
   const menuItems = [
     { key: "Overview", label: "Dashboard", icon: <FiHome /> },
     { key: "Profile", label: "My Profile", icon: <FiUser /> },
+    { key: "Achievements", label: "Achievements", icon: <FiAward /> },
     // Future features can be added here
   ];
 
@@ -117,6 +166,13 @@ const StudentDashboard = () => {
           <UserResetPasswordModal
             user={currentUser}
             onClose={() => setChangepassword(false)}
+          />
+        )}
+        {showAchievementModal && (
+          <AchievementModal
+            studentId={currentUser.student_id}
+            onClose={() => setShowAchievementModal(false)}
+            onSuccess={fetchAchievements}
           />
         )}
 
@@ -543,6 +599,121 @@ const StudentDashboard = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {selectedTab === "Achievements" && (
+              <div className="max-w-5xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      My Achievements
+                    </h2>
+                    <p className="text-gray-500">
+                      Manage your certifications, hackathons, and workshops.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAchievementModal(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30"
+                  >
+                    <FiPlus size={20} /> Add New
+                  </button>
+                </div>
+
+                {achievements.length === 0 ? (
+                  <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+                    <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiAward size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      No Achievements Yet
+                    </h3>
+                    <p className="text-gray-500 max-w-md mx-auto mb-6">
+                      Showcase your skills by uploading certificates, hackathon
+                      wins, or workshop participations.
+                    </p>
+                    <button
+                      onClick={() => setShowAchievementModal(true)}
+                      className="px-6 py-2.5 bg-blue-50 text-blue-600 font-semibold rounded-xl hover:bg-blue-100 transition-colors"
+                    >
+                      Start Adding
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                    {achievements.map((ach) => (
+                      <div
+                        key={ach.id}
+                        className="bg-white rounded-2xl shadow-sm p-6 relative group hover:shadow-md transition-all border border-transparent hover:border-blue-100"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                              ach.status === "approved"
+                                ? "bg-green-100 text-green-700"
+                                : ach.status === "rejected"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {ach.status}
+                          </span>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a
+                              href={ach.file_path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="View Proof"
+                            >
+                              <FiExternalLink size={18} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteAchievement(ach.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <FiTrash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <h3 className="text-lg font-bold text-gray-900 mb-1 leading-tight">
+                          {ach.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-3">
+                          {ach.org_name} •{" "}
+                          {dayjs(ach.date).format("MMM D, YYYY")}
+                        </p>
+
+                        {ach.description && (
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                            {ach.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-2 mt-auto pt-4 border-t border-gray-50">
+                          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            {ach.type}
+                          </span>
+                          {ach.status === "approved" && (
+                            <span className="ml-auto text-sm font-bold text-green-600">
+                              +{ach.points_awarded} Points
+                            </span>
+                          )}
+                        </div>
+
+                        {ach.status === "rejected" && ach.rejection_reason && (
+                          <div className="mt-3 bg-red-50 p-3 rounded-lg text-xs text-red-700">
+                            <span className="font-bold">Rejection Reason:</span>{" "}
+                            {ach.rejection_reason}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </main>

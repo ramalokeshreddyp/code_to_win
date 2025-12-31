@@ -472,14 +472,14 @@ function AddStudentTab() {
         {menu === "individual" && (
           <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
             <Suspense fallback={<LoadingSpinner />}>
-              <AddIndividualStudentModel />
+              <AddIndividualStudentModel inline={true} />
             </Suspense>
           </div>
         )}
         {menu === "addFaculty" && (
           <div className="bg-white p-4 md:p-6 h-fit rounded shadow">
             <Suspense fallback={<LoadingSpinner />}>
-              <AddFacultyModal />
+              <AddFacultyModal inline={true} />
             </Suspense>
           </div>
         )}
