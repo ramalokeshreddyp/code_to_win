@@ -73,6 +73,7 @@ const Footer = () => {
             { label: "Code Chef", link: "https://www.codechef.com/" },
             { label: "Hacker Rank", link: "https://www.hackerrank.com/" },
             { label: "Geek for Geeks", link: "https://www.geeksforgeeks.com" },
+            { label: "Github", link: "https://github.com" },
           ].map((items, index) => (
             <ul className="space-y-1" key={index}>
               <li>
