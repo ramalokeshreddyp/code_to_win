@@ -75,6 +75,9 @@ const AddAdminModal = lazy(() =>
 const CodingPointsReport = lazy(() =>
   import("../../components/ui/CodingPointsReport")
 );
+const AdminPlatformStatistics = lazy(() =>
+  import("../../components/ui/AdminPlatformStatistics")
+);
 const PlacementEligibilityFilter = lazy(() =>
   import("../../components/ui/PlacementEligibilityFilter")
 );
@@ -205,6 +208,7 @@ function AdminDashboard() {
 
   const menuItems = [
     { key: "Analytics", label: "Analytics Dashboard", icon: <FiBarChart2 /> },
+    { key: "PlatformStatistics", label: "Platform Statistics", icon: <FiBarChart2 /> },
     { key: "StudentRanking", label: "Student Ranking", icon: <FiBarChart2 /> },
     { key: "ManageStudents", label: "Manage Students", icon: <FiUsers /> },
     { key: "FacultyList", label: "Faculty List", icon: <FiUserCheck /> },
@@ -450,6 +454,12 @@ function AdminDashboard() {
             {selectedTab === "CodingPointsReport" && (
               <Suspense fallback={<LoadingSpinner />}>
                 <CodingPointsReport user={currentUser} />
+              </Suspense>
+            )}
+
+            {selectedTab === "PlatformStatistics" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminPlatformStatistics />
               </Suspense>
             )}
 
