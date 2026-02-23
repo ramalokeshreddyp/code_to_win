@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaUserPlus } from "react-icons/fa6";
-import { FiX, FiCheck, FiAlertTriangle } from "react-icons/fi";
+import { FiX, FiCheck, FiAlertTriangle, FiCopy, FiInfo } from "react-icons/fi";
+import toast from "react-hot-toast";
 
 const Spinner = () => (
   <svg
@@ -39,6 +40,7 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
     acc[opt.key] = user.coding_profiles?.[`${opt.key}_id`] || "";
     return acc;
   }, {});
+  const vToken = user.coding_profiles?.verification_token;
   const [usernames, setUsernames] = useState(initialUsernames);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -128,6 +130,28 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
           </p>
         </div>
 
+        {vToken && (
+          <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                <FiInfo /> Verification Token
+              </p>
+              <p className="text-lg font-mono font-bold text-blue-900">{vToken}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(vToken);
+                toast.success("Token copied!");
+              }}
+              className="p-2 bg-white text-blue-600 rounded-lg shadow-sm hover:bg-blue-50 transition-colors"
+              title="Copy Token"
+            >
+              <FiCopy size={18} />
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSave} className="space-y-4">
           <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto px-1">
             {optionList.map((opt) => (
@@ -162,7 +186,7 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
           )}
           {success && (
             <div className="p-3 bg-green-50 text-green-600 text-sm rounded-lg flex items-center gap-2">
-              <FiCheck /> Profiles connected successfully!
+              <FiCheck /> Updates saved. Please verify pending profiles.
             </div>
           )}
 

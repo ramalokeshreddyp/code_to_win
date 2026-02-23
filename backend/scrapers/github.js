@@ -104,4 +104,36 @@ async function scrapeGitHubProfile(url) {
   }
 }
 
-module.exports = scrapeGitHubProfile;
+/**
+ * Fetch the "Bio" field from a GitHub profile — used for ownership verification.
+ * @param {string} username - GitHub username
+ * @returns {string|null}
+ */
+async function fetchGitHubBio(username) {
+  if (!username || username === "N/A") return null;
+
+  try {
+    await sleep(config.RATE_LIMIT_DELAY);
+
+    const response = await axios.get(
+      `https://api.github.com/users/${username}`,
+      { timeout: config.REQUEST_TIMEOUT }
+    );
+
+    if (response.status === 200) {
+      const bio = response.data.bio || "";
+      logger.info(
+        `[VERIFY] GitHub bio fetched for ${username}: "${bio.substring(0, 50)}..."`
+      );
+      return bio;
+    }
+    return null;
+  } catch (error) {
+    logger.error(
+      `[VERIFY] Error fetching GitHub bio for ${username}: ${error.message}`
+    );
+    return null;
+  }
+}
+
+module.exports = { scrapeGitHubProfile, fetchGitHubBio };

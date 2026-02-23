@@ -1,10 +1,10 @@
 const db = require("../config/db");
 const { logger } = require("../utils");
-const scrapeHackerRankProfile = require("./hackerrank");
-const scrapeCodeChefProfile = require("./codechef");
-const scrapeGeeksForGeeksProfile = require("./geeksforgeeks");
-const scrapeLeetCodeProfile = require("./leetcode");
-const scrapeGitHubProfile = require("./github");
+const { scrapeHackerRankProfile } = require("./hackerrank");
+const { scrapeCodeChefProfile } = require("./codechef");
+const { scrapeGeeksForGeeksProfile } = require("./geeksforgeeks");
+const { scrapeLeetCodeProfile } = require("./leetcode");
+const { scrapeGitHubProfile } = require("./github");
 
 const toNumber = (value) => {
   const num = Number(value);
@@ -233,7 +233,7 @@ async function scrapeAndUpdatePerformance(student_id, platform, username) {
           // Create notification for student
           const title = `${
             platform.charAt(0).toUpperCase() + platform.slice(1)
-          } Profile Suspended`;
+            } Profile Suspended`;
           const message = `Your ${platform} profile is temporarily suspended due to connection issues. We'll retry automatically.`;
 
           await db.query(
@@ -282,7 +282,7 @@ async function updateAllStudentsPerformance() {
           (row.hackerrank_status === "suspended" &&
             (!row.last_scrape_attempt ||
               new Date(row.last_scrape_attempt) <
-                new Date(Date.now() - 24 * 60 * 60 * 1000))))
+              new Date(Date.now() - 24 * 60 * 60 * 1000))))
       ) {
         await scrapeAndUpdatePerformance(
           row.student_id,
@@ -296,7 +296,7 @@ async function updateAllStudentsPerformance() {
           (row.leetcode_status === "suspended" &&
             (!row.last_scrape_attempt ||
               new Date(row.last_scrape_attempt) <
-                new Date(Date.now() - 24 * 60 * 60 * 1000))))
+              new Date(Date.now() - 24 * 60 * 60 * 1000))))
       ) {
         await scrapeAndUpdatePerformance(
           row.student_id,
@@ -310,7 +310,7 @@ async function updateAllStudentsPerformance() {
           (row.codechef_status === "suspended" &&
             (!row.last_scrape_attempt ||
               new Date(row.last_scrape_attempt) <
-                new Date(Date.now() - 24 * 60 * 60 * 1000))))
+              new Date(Date.now() - 24 * 60 * 60 * 1000))))
       ) {
         await scrapeAndUpdatePerformance(
           row.student_id,
@@ -324,7 +324,7 @@ async function updateAllStudentsPerformance() {
           (row.geeksforgeeks_status === "suspended" &&
             (!row.last_scrape_attempt ||
               new Date(row.last_scrape_attempt) <
-                new Date(Date.now() - 24 * 60 * 60 * 1000))))
+              new Date(Date.now() - 24 * 60 * 60 * 1000))))
       ) {
         await scrapeAndUpdatePerformance(
           row.student_id,
@@ -338,7 +338,7 @@ async function updateAllStudentsPerformance() {
           (row.github_status === "suspended" &&
             (!row.last_scrape_attempt ||
               new Date(row.last_scrape_attempt) <
-                new Date(Date.now() - 24 * 60 * 60 * 1000))))
+              new Date(Date.now() - 24 * 60 * 60 * 1000))))
       ) {
         await scrapeAndUpdatePerformance(
           row.student_id,
