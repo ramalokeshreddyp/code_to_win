@@ -86,10 +86,11 @@ const StudentDashboard = () => {
     "geeksforgeeks",
     "hackerrank",
     "github",
-  ].filter(
-    (platform) =>
-      currentUser.coding_profiles?.[`${platform}_status`] === "pending_validation"
-  );
+  ].filter((platform) => {
+    const status = currentUser.coding_profiles?.[`${platform}_status`];
+    const hasId = currentUser.coding_profiles?.[`${platform}_id`];
+    return hasId && (status === "pending_validation" || status === "pending");
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -690,17 +691,19 @@ const StudentDashboard = () => {
                               `${platform}_status`
                             ]?.replace("_", " ") || "No Data"}
                           </span>
-                          {currentUser.coding_profiles?.[`${platform}_status`] === "pending_validation" && (
-                            <button
-                              onClick={() => {
-                                setVerifyPlatform(platform);
-                                setShowVerifyModal(true);
-                              }}
-                              className="ml-px text-[10px] font-bold text-blue-600 hover:underline px-2 py-1 bg-blue-50 rounded"
-                            >
-                              Verify
-                            </button>
-                          )}
+                          {currentUser.coding_profiles?.[`${platform}_id`] &&
+                            currentUser.coding_profiles?.[`${platform}_status`] !== "accepted" &&
+                            currentUser.coding_profiles?.[`${platform}_status`] !== "suspended" && (
+                              <button
+                                onClick={() => {
+                                  setVerifyPlatform(platform);
+                                  setShowVerifyModal(true);
+                                }}
+                                className="ml-px text-[10px] font-bold text-blue-600 hover:underline px-2 py-1 bg-blue-50 rounded"
+                              >
+                                Verify
+                              </button>
+                            )}
                         </div>
                       </div>
                     ))}
