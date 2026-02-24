@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMeta } from "../../context/MetaContext";
 import {
   BarChart,
@@ -18,6 +18,13 @@ const YEAR_OPTIONS = [
   { value: "3", label: "Third Year" },
   { value: "4", label: "Fourth Year" },
 ];
+
+const INITIAL_FILTERS = {
+  dept: "all",
+  year: "all",
+  section: "all",
+  degree: "all",
+};
 
 const emptyStats = {
   options: { degrees: [] },
@@ -75,12 +82,7 @@ function AdminPlatformStatistics() {
   const [loadingSections, setLoadingSections] = useState(false);
   const [stats, setStats] = useState(emptyStats);
   const [sectionOptions, setSectionOptions] = useState([]);
-  const [filters, setFilters] = useState({
-    dept: "all",
-    year: "all",
-    section: "all",
-    degree: "all",
-  });
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
   const requestIdRef = useRef(0);
 
   const degreeOptions = useMemo(() => {
@@ -88,7 +90,7 @@ function AdminPlatformStatistics() {
     return Array.isArray(items) ? items : [];
   }, [stats]);
 
-  const fetchStats = async (activeFilters = filters, silent = false) => {
+  const fetchStats = useCallback(async (activeFilters, silent = false) => {
     const requestId = ++requestIdRef.current;
     if (!silent) setLoading(true);
 
@@ -113,23 +115,27 @@ function AdminPlatformStatistics() {
       console.error(error);
       toast.error("Failed to fetch platform statistics");
     } finally {
-      if (requestId !== requestIdRef.current) return;
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchStats(filters);
-  }, []);
+    fetchStats(INITIAL_FILTERS);
+  }, [fetchStats]);
 
   useEffect(() => {
     const loadSections = async () => {
       if (filters.dept === "all" || filters.year === "all") {
         setSectionOptions([]);
         if (filters.section !== "all") {
-          const next = { ...filters, section: "all" };
-          setFilters(next);
-          fetchStats(next, true);
+          setFilters((prev) => {
+            if (prev.section === "all") return prev;
+            const next = { ...prev, section: "all" };
+            fetchStats(next, true);
+            return next;
+          });
         }
         return;
       }
@@ -167,9 +173,14 @@ function AdminPlatformStatistics() {
         if (filters.section !== "all") {
           const valid = mapped.some((sectionItem) => sectionItem.value === filters.section);
           if (!valid) {
-            const next = { ...filters, section: "all" };
-            setFilters(next);
-            fetchStats(next, true);
+            setFilters((prev) => {
+              if (prev.section === "all") return prev;
+              const stillValid = mapped.some((sectionItem) => sectionItem.value === prev.section);
+              if (stillValid) return prev;
+              const next = { ...prev, section: "all" };
+              fetchStats(next, true);
+              return next;
+            });
           }
         }
       } catch (error) {
@@ -182,7 +193,7 @@ function AdminPlatformStatistics() {
     };
 
     loadSections();
-  }, [filters.dept, filters.year]);
+  }, [fetchStats, filters.dept, filters.year, filters.section]);
 
   const updateFilter = (key, value) => {
     const next = { ...filters, [key]: value };
