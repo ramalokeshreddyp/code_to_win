@@ -2,237 +2,9 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db"); // MySQL connection
 const { logger } = require("../utils"); // <-- Add logger
-// Import bio scrapers
-const { fetchLeetCodeAbout } = require("../scrapers/leetcode");
-const { fetchGitHubBio } = require("../scrapers/github");
-const { fetchCodeChefName } = require("../scrapers/codechef");
-const { fetchHackerRankBio } = require("../scrapers/hackerrank");
-const { fetchGeeksForGeeksBio } = require("../scrapers/geeksforgeeks");
-const { scrapeAndUpdatePerformance } = require("../scrapers/scrapeAndUpdatePerformance");
-
-// POST /student/coding-profile
-router.post("/coding-profile", async (req, res) => {
-  const {
-    userId,
-    leetcode_id,
-    codechef_id,
-    geeksforgeeks_id,
-    hackerrank_id,
-    github_id,
-  } = req.body;
-  logger.info(`Submitting coding profiles: userId=${userId}`);
-  try {
-    // Check verification requirement
-    const [settings] = await db.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
-    );
-    const verificationRequired =
-      settings.length > 0 ? settings[0].setting_value === "true" : true;
-
-    // Default status: 'pending_validation' for self-verification, else 'accepted'
-    // 'pending' is now reserved for manual faculty review? Or initially pending_validation
-    const status = verificationRequired ? "pending_validation" : "accepted";
-    const verified = verificationRequired ? 0 : 1;
-
-    // Check if the student already has a coding profile row
-    const [existing] = await db.query(
-      `SELECT * FROM student_coding_profiles WHERE student_id = ?`,
-      [userId]
-    );
-
-    // Generate a unique verification token if not present
-    let verificationToken = existing.length > 0 ? existing[0].verification_token : null;
-    if (!verificationToken) {
-      // Simple random alphanumeric token: CTW-XK9L2M
-      verificationToken = `CTW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    }
-
-    // Build dynamic update fields
-    const fields = [];
-    const values = [];
-    const scrapeTasks = []; // For auto-scrape if verification not required
-
-    // Helper to add field update if value changed or is new
-    const addField = (platform, username, currentStatus) => {
-      if (username !== undefined) {
-        // Only reset verification status if the username CHANGED or adding new one
-        // If username is same, keep existing status? No, force recheck if resubmitted
-        // Actually, let's reset to pending_validation if changed.
-        // But for now, simple approach: Always set to pending_validation if submitted and verification ON
-
-        fields.push(
-          `${platform}_id = ?`,
-          `${platform}_status = '${status}'`,
-          `${platform}_verified = ${verified}`
-        );
-        values.push(username);
-
-        if (username && !verificationRequired) {
-          scrapeTasks.push({ platform, username });
-        }
-      }
-    };
-
-    addField("leetcode", leetcode_id);
-    addField("codechef", codechef_id);
-    addField("geeksforgeeks", geeksforgeeks_id);
-    addField("hackerrank", hackerrank_id);
-    addField("github", github_id);
-
-    // Always ensure token is set/updated
-    if (verificationToken) {
-      fields.push("verification_token = ?");
-      values.push(verificationToken);
-    }
-
-    if (existing.length > 0) {
-      if (fields.length > 0) {
-        await db.query(
-          `UPDATE student_coding_profiles SET ${fields.join(
-            ", "
-          )} WHERE student_id = ?`,
-          [...values, userId]
-        );
-        logger.info(`Updated coding profiles for userId: ${userId} with token ${verificationToken}`);
-      }
-    } else {
-      // Insert all fields
-      await db.query(
-        `INSERT INTO student_coding_profiles 
-         (student_id, verification_token,
-          leetcode_id, leetcode_status, leetcode_verified,
-          codechef_id, codechef_status, codechef_verified,
-          geeksforgeeks_id, geeksforgeeks_status, geeksforgeeks_verified,
-          hackerrank_id, hackerrank_status, hackerrank_verified,
-          github_id, github_status, github_verified)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          verificationToken,
-          leetcode_id || null, status, verified,
-          codechef_id || null, status, verified,
-          geeksforgeeks_id || null, status, verified,
-          hackerrank_id || null, status, verified,
-          github_id || null, status, verified,
-        ]
-      );
-      logger.info(`Inserted coding profiles for userId: ${userId} with token ${verificationToken}`);
-    }
-
-    // Start scraping immediately if verification not required
-    if (!verificationRequired) {
-      scrapeTasks.forEach(({ platform, username }) => {
-        scrapeAndUpdatePerformance(userId, platform, username).catch((err) =>
-          logger.error(`Auto-scraping error for ${platform}: ${err.message}`)
-        );
-      });
-    }
-
-    res.json({
-      message: verificationRequired ? "Profiles submitted. Please verify ownership." : "Profiles saved and scraping started",
-      verificationToken,
-      status
-    });
-  } catch (err) {
-    logger.error(
-      `Error submitting coding profiles for userId=${userId}: ${err.message}`
-    );
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// POST /student/verify-coding-profile
-router.post("/verify-coding-profile", async (req, res) => {
-  const { userId, platform } = req.body;
-  logger.info(`Verification request: userId=${userId}, platform=${platform}`);
-
-  try {
-    // 1. Get user's token and platform ID
-    const [rows] = await db.query(
-      `SELECT verification_token, ${platform}_id AS platformId, ${platform}_status AS status
-         FROM student_coding_profiles WHERE student_id = ?`,
-      [userId]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Profile not found" });
-    }
-
-    const { verification_token: verificationToken, platformId, status } = rows[0];
-
-    if (!platformId) {
-      return res.status(400).json({ message: `No ${platform} ID linked` });
-    }
-    if (!verificationToken) {
-      return res.status(400).json({ message: "No verification token found. Please resubmit profile." });
-    }
-    if (status === 'accepted') {
-      return res.json({ message: "Already verified", verified: true });
-    }
-
-    // 2. Call the appropriate bio scraper
-    let bioText = null;
-    try {
-      switch (platform) {
-        case 'leetcode':
-          bioText = await fetchLeetCodeAbout(platformId);
-          break;
-        case 'github':
-          bioText = await fetchGitHubBio(platformId);
-          break;
-        case 'codechef':
-          bioText = await fetchCodeChefName(platformId); // Name check
-          break;
-        case 'hackerrank':
-          bioText = await fetchHackerRankBio(platformId); // Jobs Headline
-          break;
-        case 'geeksforgeeks':
-          bioText = await fetchGeeksForGeeksBio(platformId); // About Me
-          break;
-        default:
-          return res.status(400).json({ message: "Invalid platform" });
-      }
-    } catch (scrapeErr) {
-      logger.error(`Scrape error ${platform}: ${scrapeErr.message}`);
-      return res.status(500).json({ message: "Scraping failed during verification. Please try again." });
-    }
-
-    // 3. Verify token presence
-    if (!bioText) {
-      return res.status(400).json({ message: "Could not fetch bio/about section. Ensure it is public." });
-    }
-
-    if (bioText.includes(verificationToken)) {
-      // Success! Update status
-      await db.query(
-        `UPDATE student_coding_profiles 
-               SET ${platform}_status = 'accepted', ${platform}_verified = 1 
-               WHERE student_id = ?`,
-        [userId]
-      );
-
-      // Trigger actual performance scrape
-      scrapeAndUpdatePerformance(userId, platform, platformId).catch(err =>
-        logger.error(`Post-verification scrape error: ${err.message}`)
-      );
-
-      logger.info(`Verified ${platform} for ${userId} successfully`);
-
-      return res.json({ message: "Verification successful!", verified: true });
-    } else {
-      logger.warn(`Verification failed for ${userId} (${platform}). Token: ${verificationToken}, Found: ${bioText.substring(0, 50)}...`);
-      return res.status(400).json({
-        message: `Token not found. We found: "${bioText.substring(0, 30)}..."`,
-        verified: false
-      });
-    }
-
-  } catch (err) {
-    logger.error(`Error verifying profile: ${err.message}`);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
+const {
+  scrapeAndUpdatePerformance,
+} = require("../scrapers/scrapeAndUpdatePerformance");
 // Profile routes
 router.get("/profile", async (req, res) => {
   const userId = req.query.userId;
@@ -260,7 +32,7 @@ router.get("/profile", async (req, res) => {
     geeksforgeeks_id, geeksforgeeks_status, geeksforgeeks_verified,
     hackerrank_id, hackerrank_status, hackerrank_verified,
     github_id, github_status, github_verified,
-    verification_token, verified_by
+    verified_by
    FROM student_coding_profiles
    WHERE student_id = ?`,
       [userId]
@@ -330,7 +102,7 @@ router.get("/profile", async (req, res) => {
         badges: isCodechefAccepted ? p.badges_cc : 0,
       },
       hackerrank: {
-        badges: isHackerrankAccepted
+        badges: isHackerrankAccepted 
           ? (p.badges_hr || JSON.parse(p.badgesList_hr || "[]").length)
           : 0,
         totalStars: isHackerrankAccepted ? p.stars_hr : 0,
@@ -450,6 +222,155 @@ router.put("/change-password", async (req, res) => {
   }
 });
 
+// POST /student/coding-profile
+router.post("/coding-profile", async (req, res) => {
+  const {
+    userId,
+    leetcode_id,
+    codechef_id,
+    geeksforgeeks_id,
+    hackerrank_id,
+    github_id,
+  } = req.body;
+  logger.info(`Submitting coding profiles: userId=${userId}`);
+  try {
+    // Check verification requirement
+    const [settings] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
+    );
+    const verificationRequired =
+      settings.length > 0 ? settings[0].setting_value === "true" : true;
+
+    const status = verificationRequired ? "pending" : "accepted";
+    const verified = verificationRequired ? 0 : 1;
+
+    // Check if the student already has a coding profile row
+    const [existing] = await db.query(
+      `SELECT * FROM student_coding_profiles WHERE student_id = ?`,
+      [userId]
+    );
+
+    // Build dynamic update fields
+    const fields = [];
+    const values = [];
+    const scrapeTasks = [];
+
+    if (leetcode_id !== undefined) {
+      fields.push(
+        "leetcode_id = ?",
+        `leetcode_status = '${status}'`,
+        `leetcode_verified = ${verified}`
+      );
+      values.push(leetcode_id);
+      if (leetcode_id && !verificationRequired)
+        scrapeTasks.push({ platform: "leetcode", username: leetcode_id });
+    }
+    if (codechef_id !== undefined) {
+      fields.push(
+        "codechef_id = ?",
+        `codechef_status = '${status}'`,
+        `codechef_verified = ${verified}`
+      );
+      values.push(codechef_id);
+      if (codechef_id && !verificationRequired)
+        scrapeTasks.push({ platform: "codechef", username: codechef_id });
+    }
+    if (geeksforgeeks_id !== undefined) {
+      fields.push(
+        "geeksforgeeks_id = ?",
+        `geeksforgeeks_status = '${status}'`,
+        `geeksforgeeks_verified = ${verified}`
+      );
+      values.push(geeksforgeeks_id);
+      if (geeksforgeeks_id && !verificationRequired)
+        scrapeTasks.push({
+          platform: "geeksforgeeks",
+          username: geeksforgeeks_id,
+        });
+    }
+    if (hackerrank_id !== undefined) {
+      fields.push(
+        "hackerrank_id = ?",
+        `hackerrank_status = '${status}'`,
+        `hackerrank_verified = ${verified}`
+      );
+      values.push(hackerrank_id);
+      if (hackerrank_id && !verificationRequired)
+        scrapeTasks.push({ platform: "hackerrank", username: hackerrank_id });
+    }
+    if (github_id !== undefined) {
+      fields.push(
+        "github_id = ?",
+        `github_status = '${status}'`,
+        `github_verified = ${verified}`
+      );
+      values.push(github_id);
+      if (github_id && !verificationRequired)
+        scrapeTasks.push({ platform: "github", username: github_id });
+    }
+
+    if (existing.length > 0) {
+      if (fields.length > 0) {
+        await db.query(
+          `UPDATE student_coding_profiles SET ${fields.join(
+            ", "
+          )} WHERE student_id = ?`,
+          [...values, userId]
+        );
+        logger.info(`Updated coding profiles for userId: ${userId}`);
+      }
+    } else {
+      // Insert all fields, missing ones as null
+      await db.query(
+        `INSERT INTO student_coding_profiles 
+         (student_id, leetcode_id, leetcode_status, leetcode_verified,
+          codechef_id, codechef_status, codechef_verified,
+          geeksforgeeks_id, geeksforgeeks_status, geeksforgeeks_verified,
+          hackerrank_id, hackerrank_status, hackerrank_verified,
+          github_id, github_status, github_verified)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          leetcode_id || null,
+          status,
+          verified,
+          codechef_id || null,
+          status,
+          verified,
+          geeksforgeeks_id || null,
+          status,
+          verified,
+          hackerrank_id || null,
+          status,
+          verified,
+          github_id || null,
+          status,
+          verified,
+        ]
+      );
+      logger.info(`Inserted coding profiles for userId: ${userId}`);
+    }
+
+    // Start scraping immediately if verification not required
+    if (!verificationRequired) {
+      scrapeTasks.forEach(({ platform, username }) => {
+        scrapeAndUpdatePerformance(userId, platform, username).catch((err) =>
+          logger.error(`Auto-scraping error for ${platform}: ${err.message}`)
+        );
+      });
+    }
+
+    const message = verificationRequired
+      ? "Coding profiles submitted for verification"
+      : "Coding profiles saved and scraping started";
+    res.json({ message });
+  } catch (err) {
+    logger.error(
+      `Error submitting coding profiles for userId=${userId}: ${err.message}`
+    );
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // GET /student/notifications
 router.get("/notifications", async (req, res) => {
@@ -480,10 +401,10 @@ router.get("/notifications", async (req, res) => {
 router.post("/refresh-coding-profiles", async (req, res) => {
   const { userId } = req.body;
   logger.info(`Refreshing coding profiles for userId: ${userId}`);
-
+  
   // Immediate response to client with timeout protection
   const REFRESH_TIMEOUT = 45000; // 45 second hard timeout
-
+  
   try {
     const [profiles] = await db.query(
       `SELECT leetcode_id, leetcode_status, codechef_id, codechef_status, geeksforgeeks_id, geeksforgeeks_status, hackerrank_id, hackerrank_status, github_id, github_status
@@ -596,7 +517,7 @@ router.post("/refresh-coding-profiles", async (req, res) => {
     logger.info(
       `Completed refresh for ${successCount}/${tasks.length} coding profiles for userId: ${userId}`
     );
-
+    
     res.json({
       message: `Refreshed ${successCount} of ${tasks.length} coding profiles`,
       success: successCount > 0,
