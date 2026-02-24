@@ -82,9 +82,7 @@ const Register = () => {
     hackerrank: "",
     geeksforgeeks: "",
     codechef: "",
-    github: "",
   });
-  const [regResult, setRegResult] = useState(null);
 
   // Fetch dynamic sections
   useEffect(() => {
@@ -169,12 +167,9 @@ const Register = () => {
       if (!result.ok) {
         const errorData = await result.json();
         setErr(errorData.message);
-        setIsSubmitting(false);
         return;
       }
 
-      const data = await result.json();
-      setRegResult(data);
       setStep("complete");
     } catch (error) {
       console.error("Registration error:", error);
@@ -245,7 +240,7 @@ const Register = () => {
                         <span
                           className={`mt-2 text-xs font-bold uppercase tracking-wider ${
                             isActive ? "text-blue-600" : "text-gray-400"
-                            }`}
+                          }`}
                         >
                           {item.label}
                         </span>
@@ -327,9 +322,9 @@ const Register = () => {
                             key={g}
                             className={`flex-1 flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${
                               formData.gender === g
-                              ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
-                              : "bg-gray-50/50 border-gray-100 text-gray-500 hover:border-gray-200"
-                              }`}
+                                ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
+                                : "bg-gray-50/50 border-gray-100 text-gray-500 hover:border-gray-200"
+                            }`}
                           >
                             <input
                               type="radio"
@@ -422,7 +417,7 @@ const Register = () => {
                           disabled={loadingSections}
                           className={`w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-gray-800 appearance-none ${
                             loadingSections ? "bg-gray-100 opacity-70" : ""
-                            }`}
+                          }`}
                         >
                           <option value="">
                             {loadingSections ? "Loading..." : "Select Section"}
@@ -509,17 +504,6 @@ const Register = () => {
                           className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm"
                         />
                       </InputWrapper>
-
-                      <InputWrapper icon={FiCode} label="GitHub ID">
-                        <input
-                          type="text"
-                          name="github"
-                          value={formData.github}
-                          onChange={handleChange}
-                          placeholder="e.g. aditya05"
-                          className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm"
-                        />
-                      </InputWrapper>
                     </div>
                   </motion.div>
                 )}
@@ -543,43 +527,20 @@ const Register = () => {
                         <FiCheckCircle size={48} />
                       </motion.div>
                     </div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      Registration Success!
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                      Registration Sent!
                     </h2>
-
-                    {regResult?.verificationRequired ? (
-                      <div className="mb-8 mt-6">
-                        <p className="text-gray-600 mb-6 leading-relaxed max-w-sm mx-auto">
-                          Great work! Your account is created, but you need to <strong>verify your coding profiles</strong> before we can track your performance.
-                        </p>
-
-                        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 mb-6">
-                          <p className="text-blue-900 font-bold mb-2">Your Verification Token:</p>
-                          <div className="bg-white px-6 py-3 rounded-xl border-2 border-dashed border-blue-300 inline-block font-mono text-xl tracking-widest text-blue-700 shadow-sm">
-                            {regResult.verificationToken}
-                          </div>
-                          <p className="text-blue-800 text-sm mt-4 leading-relaxed">
-                            Put this token in your LeetCode/HackerRank profile description and click <strong>"Verify Now"</strong> on your dashboard.
-                          </p>
-                        </div>
-
-                        <p className="text-xs text-gray-500 italic">
-                          Login details have been sent to <strong>{formData.email}</strong>
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-gray-600 mb-8 leading-relaxed max-w-sm mx-auto">
-                        Great work! We've sent an email with your login credentials to <strong>{formData.email}</strong>.
-                      </p>
-                    )}
-
+                    <p className="text-gray-600 mb-8 leading-relaxed max-w-sm mx-auto">
+                      Great work! We'll process your details shortly and send an
+                      email with your login credentials once verified.
+                    </p>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => navi("/")}
                       className="inline-flex items-center gap-2 py-3 px-10 rounded-2xl bg-gray-900 text-white font-bold hover:bg-gray-800 transition-all shadow-xl shadow-gray-200"
                     >
-                      Login Now
+                      Back To Home
                       <FiArrowRight />
                     </motion.button>
                   </motion.div>
@@ -608,9 +569,9 @@ const Register = () => {
                     disabled={isSubmitting}
                     className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold shadow-lg transition-all ${
                       step === 3
-                      ? "bg-green-600 text-white shadow-green-100 hover:bg-green-700"
-                      : "bg-blue-600 text-white shadow-blue-100 hover:bg-blue-700"
-                      }`}
+                        ? "bg-green-600 text-white shadow-green-100 hover:bg-green-700"
+                        : "bg-blue-600 text-white shadow-blue-100 hover:bg-blue-700"
+                    }`}
                   >
                     {isSubmitting ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

@@ -26,7 +26,6 @@ import {
   EditModal,
   UpdateProfileModal,
   UserResetPasswordModal,
-  VerificationInstructionsModal,
 } from "../../components/Modals";
 import AchievementModal from "../../components/modals/AchievementModal";
 import SectionLeaderboard from "../../components/SectionLeaderboard";
@@ -44,8 +43,6 @@ const StudentDashboard = () => {
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [initialAchievementType, setInitialAchievementType] = useState(null);
   const [selectedTab, setSelectedTab] = useState("Overview");
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [verifyPlatform, setVerifyPlatform] = useState(null);
 
   const { currentUser, checkAuth, logout } = useAuth();
   const formattedDate = dayjs(
@@ -55,7 +52,7 @@ const StudentDashboard = () => {
   const totalContests =
     currentUser.performance.combined?.totalContests ??
     currentUser.performance.platformWise.leetcode.contests +
-    currentUser.performance.platformWise.codechef.contests;
+      currentUser.performance.platformWise.codechef.contests;
 
   const totalBadges =
     currentUser.performance.platformWise.leetcode.badges +
@@ -80,22 +77,10 @@ const StudentDashboard = () => {
     )
     .map((platform) => platform.charAt(0).toUpperCase() + platform.slice(1));
 
-  const pendingPlatforms = [
-    "leetcode",
-    "codechef",
-    "geeksforgeeks",
-    "hackerrank",
-    "github",
-  ].filter((platform) => {
-    const status = currentUser.coding_profiles?.[`${platform}_status`];
-    const hasId = currentUser.coding_profiles?.[`${platform}_id`];
-    return hasId && (status === "pending_validation" || status === "pending");
-  });
-
   const handleRefresh = async () => {
     setRefreshing(true);
     const toastId = toast.loading("Syncing your coding profiles...");
-
+    
     try {
       const res = await fetch("/api/student/refresh-coding-profiles", {
         method: "POST",
@@ -104,16 +89,16 @@ const StudentDashboard = () => {
         },
         body: JSON.stringify({ userId: currentUser.student_id }),
       });
-
+      
       if (!res.ok) {
         throw new Error("Failed to refresh coding profiles");
       }
-
+      
       const data = await res.json();
-
+      
       // Optimistic update immediately
       await checkAuth();
-
+      
       if (data.success) {
         toast.success(
           `${data.message} - Updates applied!`,
@@ -222,16 +207,6 @@ const StudentDashboard = () => {
             }}
           />
         )}
-        {showVerifyModal && (
-          <VerificationInstructionsModal
-            userId={currentUser.student_id}
-            platform={verifyPlatform}
-            username={currentUser.coding_profiles?.[`${verifyPlatform}_id`]}
-            token={currentUser.coding_profiles?.verification_token}
-            onClose={() => setShowVerifyModal(false)}
-            onSuccess={() => checkAuth()}
-          />
-        )}
 
         <Navbar toggleSidebar={() => setSidebarOpen(true)} />
 
@@ -260,33 +235,6 @@ const StudentDashboard = () => {
                       issues. Will retry shortly.
                     </p>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {pendingPlatforms.length > 0 && (
-              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <FiAlertTriangle className="text-blue-500 mr-2" />
-                    <div>
-                      <p className="text-sm font-bold text-blue-900">
-                        Verification Required
-                      </p>
-                      <p className="text-sm text-blue-800">
-                        {pendingPlatforms.length} profile{pendingPlatforms.length > 1 ? 's' : ''} need ownership verification.
-                        Tracking will start only after verification.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedTab("Profile");
-                    }}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-white px-3 py-1.5 rounded-lg shadow-sm transition-all whitespace-nowrap"
-                  >
-                    Verify Now
-                  </button>
                 </div>
               </div>
             )}
@@ -345,26 +293,23 @@ const StudentDashboard = () => {
                     </div>
 
                     {/* Floating Glass Stats */}
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex gap-4">
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex flex-col items-center min-w-[100px]">
-                          <span className="text-blue-200 text-sm font-medium">
-                            Rank
-                          </span>
-                          <span className="text-3xl font-bold">
-                            {currentUser.overall_rank || "—"}
-                          </span>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex flex-col items-center min-w-[100px]">
-                          <span className="text-blue-200 text-sm font-medium">
-                            Score
-                          </span>
-                          <span className="text-3xl font-bold text-green-300">
-                            {currentUser.score || "—"}
-                          </span>
-                        </div>
+                    <div className="flex gap-4">
+                      <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex flex-col items-center min-w-[100px]">
+                        <span className="text-blue-200 text-sm font-medium">
+                          Rank
+                        </span>
+                        <span className="text-3xl font-bold">
+                          {currentUser.overall_rank}
+                        </span>
                       </div>
-                      <span className="text-blue-200/60 text-[10px]">Updates daily at 3:00 AM</span>
+                      <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex flex-col items-center min-w-[100px]">
+                        <span className="text-blue-200 text-sm font-medium">
+                          Score
+                        </span>
+                        <span className="text-3xl font-bold text-green-300">
+                          {currentUser.score}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -410,103 +355,103 @@ const StudentDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
                   {currentUser.coding_profiles?.leetcode_status ===
                     "accepted" && (
-                      <PlatformCard
-                        name="LeetCode"
-                        color="border-l-4 border-yellow-500"
-                        icon="/LeetCode_logo.png"
-                        ani="fade-up"
-                        total={
-                          currentUser.performance.platformWise.leetcode.easy +
-                          currentUser.performance.platformWise.leetcode.medium +
-                          currentUser.performance.platformWise.leetcode.hard
-                        }
-                        breakdown={{
-                          Easy: currentUser.performance.platformWise.leetcode
-                            .easy,
-                          Medium:
-                            currentUser.performance.platformWise.leetcode.medium,
-                          Hard: currentUser.performance.platformWise.leetcode
-                            .hard,
-                          Contests:
-                            currentUser.performance.platformWise.leetcode
-                              .contests,
-                          Rating:
-                            currentUser.performance.platformWise.leetcode
-                              .rating,
-                          Badges:
-                            currentUser.performance.platformWise.leetcode.badges,
-                        }}
-                      />
-                    )}
+                    <PlatformCard
+                      name="LeetCode"
+                      color="border-l-4 border-yellow-500"
+                      icon="/LeetCode_logo.png"
+                      ani="fade-up"
+                      total={
+                        currentUser.performance.platformWise.leetcode.easy +
+                        currentUser.performance.platformWise.leetcode.medium +
+                        currentUser.performance.platformWise.leetcode.hard
+                      }
+                      breakdown={{
+                        Easy: currentUser.performance.platformWise.leetcode
+                          .easy,
+                        Medium:
+                          currentUser.performance.platformWise.leetcode.medium,
+                        Hard: currentUser.performance.platformWise.leetcode
+                          .hard,
+                        Contests:
+                          currentUser.performance.platformWise.leetcode
+                            .contests,
+                        Rating:
+                          currentUser.performance.platformWise.leetcode
+                            .rating,
+                        Badges:
+                          currentUser.performance.platformWise.leetcode.badges,
+                      }}
+                    />
+                  )}
                   {currentUser.coding_profiles?.codechef_status ===
                     "accepted" && (
-                      <PlatformCard
-                        name="CodeChef"
-                        color="border-l-4 border-orange-600"
-                        icon="/codechef_logo.png"
-                        ani="fade-up"
-                        total={
-                          currentUser.performance.platformWise.codechef.problems
-                        }
-                        subtitle="Problems Solved"
-                        breakdown={{
-                          Contests:
-                            currentUser.performance.platformWise.codechef
-                              .contests,
-                          Rating:
-                            currentUser.performance.platformWise.codechef
-                              .rating,
-                          Stars: currentUser.performance.platformWise.codechef
-                            .stars,
-                          Badges:
-                            currentUser.performance.platformWise.codechef.badges,
-                        }}
-                      />
-                    )}
+                    <PlatformCard
+                      name="CodeChef"
+                      color="border-l-4 border-orange-600"
+                      icon="/codechef_logo.png"
+                      ani="fade-up"
+                      total={
+                        currentUser.performance.platformWise.codechef.problems
+                      }
+                      subtitle="Problems Solved"
+                      breakdown={{
+                        Contests:
+                          currentUser.performance.platformWise.codechef
+                            .contests,
+                        Rating:
+                          currentUser.performance.platformWise.codechef
+                            .rating,
+                        Stars: currentUser.performance.platformWise.codechef
+                          .stars,
+                        Badges:
+                          currentUser.performance.platformWise.codechef.badges,
+                      }}
+                    />
+                  )}
                   {currentUser.coding_profiles?.geeksforgeeks_status ===
                     "accepted" && (
-                      <PlatformCard
-                        name="GeeksforGeeks"
-                        color="border-l-4 border-green-600"
-                        icon="/GeeksForGeeks_logo.png"
-                        ani="fade-down"
-                        total={
-                          currentUser.performance.platformWise.gfg.school +
-                          currentUser.performance.platformWise.gfg.basic +
-                          currentUser.performance.platformWise.gfg.easy +
-                          currentUser.performance.platformWise.gfg.medium +
-                          currentUser.performance.platformWise.gfg.hard
-                        }
-                        breakdown={{
-                          School: currentUser.performance.platformWise.gfg.school,
-                          Basic: currentUser.performance.platformWise.gfg.basic,
-                          Easy: currentUser.performance.platformWise.gfg.easy,
-                          Medium: currentUser.performance.platformWise.gfg.medium,
-                          Hard: currentUser.performance.platformWise.gfg.hard,
-                        }}
-                      />
-                    )}
+                    <PlatformCard
+                      name="GeeksforGeeks"
+                      color="border-l-4 border-green-600"
+                      icon="/GeeksForGeeks_logo.png"
+                      ani="fade-down"
+                      total={
+                        currentUser.performance.platformWise.gfg.school +
+                        currentUser.performance.platformWise.gfg.basic +
+                        currentUser.performance.platformWise.gfg.easy +
+                        currentUser.performance.platformWise.gfg.medium +
+                        currentUser.performance.platformWise.gfg.hard
+                      }
+                      breakdown={{
+                        School: currentUser.performance.platformWise.gfg.school,
+                        Basic: currentUser.performance.platformWise.gfg.basic,
+                        Easy: currentUser.performance.platformWise.gfg.easy,
+                        Medium: currentUser.performance.platformWise.gfg.medium,
+                        Hard: currentUser.performance.platformWise.gfg.hard,
+                      }}
+                    />
+                  )}
                   {currentUser.coding_profiles?.hackerrank_status ===
                     "accepted" && (
-                      <PlatformCard
-                        name="HackerRank"
-                        color="border-l-4 border-gray-800"
-                        icon="/HackerRank_logo.png"
-                        ani="fade-down"
-                        total={
-                          currentUser.performance.platformWise.hackerrank.badges || 0
-                        }
-                        label="Badges"
-                        subtitle={`${currentUser.performance.platformWise.hackerrank.totalStars || 0} Total Stars`}
-                        breakdown={(
-                          currentUser.performance.platformWise.hackerrank
-                            .badgesList || []
-                        ).reduce((acc, badge) => {
-                          acc[badge.name] = `${badge.stars}⭐`;
-                          return acc;
-                        }, {})}
-                      />
-                    )}
+                    <PlatformCard
+                      name="HackerRank"
+                      color="border-l-4 border-gray-800"
+                      icon="/HackerRank_logo.png"
+                      ani="fade-down"
+                      total={
+                        currentUser.performance.platformWise.hackerrank.badges || 0
+                      }
+                      label="Badges"
+                      subtitle={`${currentUser.performance.platformWise.hackerrank.totalStars || 0} Total Stars`}
+                      breakdown={(
+                        currentUser.performance.platformWise.hackerrank
+                          .badgesList || []
+                      ).reduce((acc, badge) => {
+                        acc[badge.name] = `${badge.stars}⭐`;
+                        return acc;
+                      }, {})}
+                    />
+                  )}
                   {currentUser.coding_profiles?.github_id && (
                     <PlatformCard
                       name="GitHub"
@@ -672,38 +617,22 @@ const StudentDashboard = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${currentUser.coding_profiles?.[
-                              `${platform}_status`
-                            ] === "accepted"
-                              ? "bg-green-100 text-green-700"
-                              : currentUser.coding_profiles?.[
+                            className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                              currentUser.coding_profiles?.[
                                 `${platform}_status`
-                              ] === "pending_validation"
-                                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                              ] === "accepted"
+                                ? "bg-green-100 text-green-700"
                                 : currentUser.coding_profiles?.[
-                                  `${platform}_status`
-                                ] === "pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-gray-100 text-gray-600"
-                              }`}
+                                    `${platform}_status`
+                                  ] === "pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
                           >
                             {currentUser.coding_profiles?.[
                               `${platform}_status`
-                            ]?.replace("_", " ") || "No Data"}
+                            ] || "No Data"}
                           </span>
-                          {currentUser.coding_profiles?.[`${platform}_id`] &&
-                            currentUser.coding_profiles?.[`${platform}_status`] !== "accepted" &&
-                            currentUser.coding_profiles?.[`${platform}_status`] !== "suspended" && (
-                              <button
-                                onClick={() => {
-                                  setVerifyPlatform(platform);
-                                  setShowVerifyModal(true);
-                                }}
-                                className="ml-px text-[10px] font-bold text-blue-600 hover:underline px-2 py-1 bg-blue-50 rounded"
-                              >
-                                Verify
-                              </button>
-                            )}
                         </div>
                       </div>
                     ))}

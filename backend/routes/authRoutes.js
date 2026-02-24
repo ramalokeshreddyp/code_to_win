@@ -149,7 +149,6 @@ router.post("/register", async (req, res) => {
     hackerrank,
     geeksforgeeks,
     codechef,
-    github,
   } = req.body.formData;
 
   // Normalize student ID
@@ -167,40 +166,10 @@ router.post("/register", async (req, res) => {
   const connection = await db.getConnection(); // Use a connection from the pool
 
   try {
-    // 0. Preliminary check to see if user OR email already exists
-    const [existing] = await connection.query(
-      "SELECT user_id, email FROM users WHERE user_id = ? OR email = ?",
-      [cleanedStdId, email]
-    );
-
-    if (existing.length > 0) {
-      const isIdMatch = existing.some(u => u.user_id === cleanedStdId);
-      const isEmailMatch = existing.some(u => u.email === email);
-
-      let message = "User already exists.";
-      if (isIdMatch && isEmailMatch) message = `Student ID ${cleanedStdId} and Email ${email} are already registered.`;
-      else if (isIdMatch) message = `Student ID ${cleanedStdId} is already registered.`;
-      else if (isEmailMatch) message = `Email ${email} is already registered.`;
-
-      logger.warn(`Registration attempt for existing user/email: ${cleanedStdId}, ${email}`);
-      return res.status(400).json({ message });
-    }
-
     await connection.beginTransaction();
     logger.info(
       `Adding student: ${cleanedStdId}, ${name}, ${dept}, ${year}, ${section}, ${email}`
     );
-
-    // 0. Check verification requirement
-    const [settings] = await connection.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
-    );
-    const verificationRequired =
-      settings.length > 0 ? settings[0].setting_value === "true" : true;
-
-    const status = verificationRequired ? "pending_validation" : "accepted";
-    const verified = verificationRequired ? 0 : 1;
-    const verificationToken = `CTW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     const hashed = await bcrypt.hash(cleanedStdId, 13);
 
@@ -228,29 +197,24 @@ router.post("/register", async (req, res) => {
     );
     await connection.query(
       `INSERT INTO student_coding_profiles 
-    (student_id, verification_token,
-     hackerrank_id, leetcode_id, codechef_id, geeksforgeeks_id, github_id,
-     hackerrank_status, leetcode_status, codechef_status, geeksforgeeks_status, github_status,
-     hackerrank_verified, leetcode_verified, codechef_verified, geeksforgeeks_verified, github_verified)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (student_id, hackerrank_id, leetcode_id, codechef_id, geeksforgeeks_id,
+     hackerrank_status, leetcode_status, codechef_status, geeksforgeeks_status,
+     hackerrank_verified, leetcode_verified, codechef_verified, geeksforgeeks_verified)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         cleanedStdId,
-        verificationToken,
         hackerrank || null,
         leetcode || null,
         codechef || null,
         geeksforgeeks || null,
-        github || null,
-        status, // hackerrank_status
-        status, // leetcode_status
-        status, // codechef_status
-        status, // geeksforgeeks_status
-        status, // github_status
-        verified, // hackerrank_verified
-        verified, // leetcode_verified
-        verified, // codechef_verified
-        verified, // geeksforgeeks_verified
-        verified, // github_verified
+        "accepted", // hackerrank_status
+        "accepted", // leetcode_status
+        "accepted", // codechef_status
+        "accepted", // geeksforgeeks_status
+        1, // hackerrank_verified
+        1, // leetcode_verified
+        1, // codechef_verified
+        1, // geeksforgeeks_verified
       ]
     );
 
@@ -261,39 +225,39 @@ router.post("/register", async (req, res) => {
     );
     const dept_name = deptRows.length > 0 ? deptRows[0].dept_name : null;
 
-    // Send email with login details
-    await connection.commit();
-    logger.info(`Student added successfully: ${cleanedStdId}`);
-
-    // background operations
-    sendNewRegistrationMail(email, name, cleanedStdId, cleanedStdId);
+    await sendNewRegistrationMail(email, name, cleanedStdId, cleanedStdId);
 
     // After inserting into student_coding_profiles table:
-    if (!verificationRequired) {
-      if (hackerrank) scrapeAndUpdatePerformance(cleanedStdId, "hackerrank", hackerrank);
-      if (leetcode) scrapeAndUpdatePerformance(cleanedStdId, "leetcode", leetcode);
-      if (codechef) scrapeAndUpdatePerformance(cleanedStdId, "codechef", codechef);
-      if (geeksforgeeks) scrapeAndUpdatePerformance(cleanedStdId, "geeksforgeeks", geeksforgeeks);
-      if (github) scrapeAndUpdatePerformance(cleanedStdId, "github", github);
+    if (hackerrank) {
+      scrapeAndUpdatePerformance(cleanedStdId, "hackerrank", hackerrank);
     }
+    if (leetcode) {
+      scrapeAndUpdatePerformance(cleanedStdId, "leetcode", leetcode);
+    }
+    if (codechef) {
+      scrapeAndUpdatePerformance(cleanedStdId, "codechef", codechef);
+    }
+    if (geeksforgeeks) {
+      scrapeAndUpdatePerformance(cleanedStdId, "geeksforgeeks", geeksforgeeks);
+    }
+    // Send email with login details
+    await connection.commit();
 
-    res.status(200).json({
-      message: "Student added successfully",
-      verificationToken: verificationToken,
-      verificationRequired: verificationRequired
-    });
+    logger.info(`Student added successfully: ${cleanedStdId}`);
+
+    res.status(200).json({ message: "Student added successfully" });
   } catch (err) {
-    if (connection) await connection.rollback();
+    await connection.rollback();
     logger.error(`Error adding student: ${err.message}`);
     res.status(500).json({
       message:
         err.code === "ER_DUP_ENTRY"
-          ? `Duplicate Entry: ${err.sqlMessage || 'A record with this ID already exists.'}`
+          ? `Student with ID ${cleanedStdId} already exists`
           : err.message,
       error: err.errno,
     });
   } finally {
-    if (connection) connection.release();
+    connection.release();
   }
 });
 

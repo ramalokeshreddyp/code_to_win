@@ -11,10 +11,10 @@ const { logger } = require("../utils"); // <-- Add logger
 const {
   scrapeAndUpdatePerformance,
 } = require("../scrapers/scrapeAndUpdatePerformance");
-const { scrapeLeetCodeProfile } = require("../scrapers/leetcode");
-const { scrapeCodeChefProfile } = require("../scrapers/codechef");
-const { scrapeHackerRankProfile } = require("../scrapers/hackerrank");
-const { scrapeGeeksForGeeksProfile } = require("../scrapers/geeksforgeeks");
+const scrapeLeetCodeProfile = require("../scrapers/leetcode");
+const scrapeCodeChefProfile = require("../scrapers/codechef");
+const scrapeHackerRankProfile = require("../scrapers/hackerrank");
+const scrapeGeeksForGeeksProfile = require("../scrapers/geeksforgeeks");
 
 // Configure multer for CSV uploads
 const upload = multer({
@@ -440,8 +440,8 @@ router.post("/bulk-import-student", upload.single("file"), async (req, res) => {
             err.code === "ER_DUP_ENTRY"
               ? `Student with ID ${stdId} already exists`
               : err.code === "ER_BAD_NULL_ERROR"
-                ? `Check fields in CSV and upload again`
-                : err.message,
+              ? `Check fields in CSV and upload again`
+              : err.message,
         });
       }
     }
@@ -550,8 +550,8 @@ router.post("/bulk-import-faculty", upload.single("file"), async (req, res) => {
             err.code === "ER_DUP_ENTRY"
               ? `Faculty with ID ${facultyId} already exists`
               : err.code === "ER_BAD_NULL_ERROR"
-                ? `Check fields in CSV and upload again`
-                : err.message,
+              ? `Check fields in CSV and upload again`
+              : err.message,
         });
       }
     }
@@ -626,22 +626,11 @@ router.post("/bulk-import-with-cp", upload.single("file"), async (req, res) => {
     logger.info(`Parsed ${fileRows.length} student rows from CSV`);
     await connection.beginTransaction();
 
-    // 0. Check verification requirement
-    const [settings] = await connection.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
-    );
-    const verificationRequired =
-      settings.length > 0 ? settings[0].setting_value === "true" : true;
-
-    const status = verificationRequired ? "pending_validation" : "accepted";
-    const verified = verificationRequired ? 0 : 1;
-
     for (const row of fileRows) {
       const stdId = row["Student Id"];
       const hashed = await bcrypt.hash(stdId, 10);
       const name = row["Student Name"];
       const email = `${stdId}@aec.edu.in`;
-      const verificationToken = `CTW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       try {
         // Insert into users table
         await connection.query(
@@ -672,49 +661,39 @@ router.post("/bulk-import-with-cp", upload.single("file"), async (req, res) => {
         // Insert into student_coding_profiles table
         await connection.query(
           `INSERT INTO student_coding_profiles 
-    (student_id, verification_token,
-     hackerrank_id, leetcode_id, codechef_id, geeksforgeeks_id, github_id,
-     hackerrank_status, leetcode_status, codechef_status, geeksforgeeks_status, github_status,
-     hackerrank_verified, leetcode_verified, codechef_verified, geeksforgeeks_verified, github_verified)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (student_id, hackerrank_id, leetcode_id, codechef_id, geeksforgeeks_id,
+     hackerrank_status, leetcode_status, codechef_status, geeksforgeeks_status,
+     hackerrank_verified, leetcode_verified, codechef_verified, geeksforgeeks_verified)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             stdId,
-            verificationToken,
             row.HackerRank || null,
             row.LeetCode || null,
             row.CodeChef || null,
             row.GeeksforGeeks || null,
-            row.GitHub || null,
-            status, // hackerrank_status
-            status, // leetcode_status
-            status, // codechef_status
-            status, // geeksforgeeks_status
-            status, // github_status
-            verified, // hackerrank_verified
-            verified, // leetcode_verified
-            verified, // codechef_verified
-            verified, // geeksforgeeks_verified
-            verified, // github_verified
+            "accepted", // hackerrank_status
+            "accepted", // leetcode_status
+            "accepted", // codechef_status
+            "accepted", // geeksforgeeks_status
+            1, // hackerrank_verified
+            1, // leetcode_verified
+            1, // codechef_verified
+            1, // geeksforgeeks_verified
           ]
         );
 
         // After inserting into student_coding_profiles table:
-        if (!verificationRequired) {
-          if (row.HackerRank) {
-            scrapeAndUpdatePerformance(stdId, "hackerrank", row.HackerRank);
-          }
-          if (row.LeetCode) {
-            scrapeAndUpdatePerformance(stdId, "leetcode", row.LeetCode);
-          }
-          if (row.CodeChef) {
-            scrapeAndUpdatePerformance(stdId, "codechef", row.CodeChef);
-          }
-          if (row.GeeksforGeeks) {
-            scrapeAndUpdatePerformance(stdId, "geeksforgeeks", row.GeeksforGeeks);
-          }
-          if (row.GitHub) {
-            scrapeAndUpdatePerformance(stdId, "github", row.GitHub);
-          }
+        if (row.HackerRank) {
+          scrapeAndUpdatePerformance(stdId, "hackerrank", row.HackerRank);
+        }
+        if (row.LeetCode) {
+          scrapeAndUpdatePerformance(stdId, "leetcode", row.LeetCode);
+        }
+        if (row.CodeChef) {
+          scrapeAndUpdatePerformance(stdId, "codechef", row.CodeChef);
+        }
+        if (row.GeeksforGeeks) {
+          scrapeAndUpdatePerformance(stdId, "geeksforgeeks", row.GeeksforGeeks);
         }
 
         results.push({ stdId: stdId, status: "success" });
@@ -726,8 +705,8 @@ router.post("/bulk-import-with-cp", upload.single("file"), async (req, res) => {
             err.code === "ER_DUP_ENTRY"
               ? `Student with ID ${stdId} already exists`
               : err.code === "ER_BAD_NULL_ERROR"
-                ? `Check fields in CSV and upload again`
-                : err.message,
+              ? `Check fields in CSV and upload again`
+              : err.message,
         });
       }
     }
