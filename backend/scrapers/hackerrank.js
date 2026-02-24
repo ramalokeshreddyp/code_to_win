@@ -3,6 +3,8 @@
  */
 
 const cheerio = require("cheerio");
+const axios = require("axios");
+const config = require("../config");
 const { logger, safeRequest, extractUsername } = require("../utils");
 
 /**
@@ -67,4 +69,43 @@ async function scrapeHackerRankProfile(url) {
     throw error;
   }
 }
-module.exports = scrapeHackerRankProfile;
+
+/**
+ * Fetch the short bio from a HackerRank profile — used for ownership verification.
+ * @param {string} username - HackerRank username
+ * @returns {string|null}
+ */
+async function fetchHackerRankBio(username) {
+  if (!username || username === "N/A") return null;
+
+  // Use HackerRank's REST API — returns short_bio directly (no JS rendering needed)
+  const url = `https://www.hackerrank.com/rest/hackers/${username}`;
+
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+      timeout: config.REQUEST_TIMEOUT,
+    });
+
+    if (response.status !== 200) return null;
+
+    const data = response.data.model || response.data;
+    // HackerRank stores the headline below the name in "jobs_headline"
+    const bio = data.jobs_headline || data.short_bio || "";
+
+    logger.info(
+      `[VERIFY] HackerRank bio fetched for ${username}: "${(bio || "").substring(0, 50)}..."`
+    );
+    return bio;
+  } catch (error) {
+    logger.error(
+      `[VERIFY] Error fetching HackerRank bio for ${username}: ${error.message}`
+    );
+    return null;
+  }
+}
+
+module.exports = { scrapeHackerRankProfile, fetchHackerRankBio };

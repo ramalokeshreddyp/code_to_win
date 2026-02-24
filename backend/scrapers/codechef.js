@@ -111,4 +111,46 @@ async function scrapeCodeChefProfile(url) {
   }
 }
 
-module.exports = scrapeCodeChefProfile;
+/**
+ * Fetch the display name from a CodeChef profile — used for ownership verification.
+ * @param {string} username - CodeChef username
+ * @returns {string|null}
+ */
+async function fetchCodeChefName(username) {
+  if (!username || username === "N/A") return null;
+
+  const url = `https://www.codechef.com/users/${username}`;
+
+  try {
+    await sleep(5000); // Extra delay for CodeChef rate limiting
+
+    const headers = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "Accept-Language": "en-US,en;q=0.9",
+      Referer: "https://www.google.com/",
+    };
+
+    const response = await axios.get(url, {
+      headers,
+      timeout: config.REQUEST_TIMEOUT * 2,
+    });
+
+    if (response.status !== 200) return null;
+
+    const $ = cheerio.load(response.data);
+
+    // CodeChef display name is in h1.h2-style — editable by the account owner
+    const name = $("h1.h2-style").first().text().trim() || "";
+
+    logger.info(`[VERIFY] CodeChef name fetched for ${username}: "${name.substring(0, 50)}"`);
+    return name;
+  } catch (error) {
+    logger.error(
+      `[VERIFY] Error fetching CodeChef name for ${username}: ${error.message}`
+    );
+    return null;
+  }
+}
+
+module.exports = { scrapeCodeChefProfile, fetchCodeChefName };

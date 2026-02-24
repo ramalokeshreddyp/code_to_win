@@ -1,8 +1,8 @@
 const XLSX = require("xlsx");
 const fs = require("fs");
-const scrapeLeetCodeProfile = require("../scrapers/leetcode");
-const scrapeCodeChefProfile = require("../scrapers/codechef");
-const scrapeHackerRankProfile = require("../scrapers/hackerrank");
+const { scrapeLeetCodeProfile } = require("../scrapers/leetcode");
+const { scrapeCodeChefProfile } = require("../scrapers/codechef");
+const { scrapeHackerRankProfile } = require("../scrapers/hackerrank");
 
 // Configure your Excel file path here
 const EXCEL_FILE_PATH = "./AECT_3rd_year_input.xlsx"; // Change this to your Excel file path
@@ -147,9 +147,9 @@ async function processStudentData() {
         platformErrors: platformErrors,
         timestamp: new Date().toISOString()
       };
-      
+
       jsonLog.push(logEntry);
-      
+
       // Live update JSON file
       fs.writeFileSync(JSON_LOG_PATH, JSON.stringify(jsonLog, null, 2));
 

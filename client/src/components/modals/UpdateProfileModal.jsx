@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FaUserPlus } from "react-icons/fa6";
-import { FiX, FiCheck, FiAlertTriangle } from "react-icons/fi";
+import { FiX, FiCheck, FiAlertTriangle, FiCopy, FiInfo, FiShield } from "react-icons/fi";
+import toast from "react-hot-toast";
+import VerificationInstructionsModal from "./VerificationInstructionsModal";
 
 const Spinner = () => (
   <svg
@@ -39,10 +41,16 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
     acc[opt.key] = user.coding_profiles?.[`${opt.key}_id`] || "";
     return acc;
   }, {});
+  const vToken = user.coding_profiles?.verification_token;
   const [usernames, setUsernames] = useState(initialUsernames);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [savedToken, setSavedToken] = useState(vToken || null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verifyingPlatform, setVerifyingPlatform] = useState(null);
+  const [changedPlatforms, setChangedPlatforms] = useState([]);
+  const [verifiedPlatforms, setVerifiedPlatforms] = useState(new Set());
 
   useEffect(() => {
     setUsernames(initialUsernames);
@@ -61,11 +69,13 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
 
     // Build payload with only changed usernames
     const payload = { userId: user.student_id };
+    const changed = [];
     optionList.forEach((opt) => {
       const prev = user.coding_profiles?.[`${opt.key}_id`] || "";
       const curr = usernames[opt.key] || "";
       if (prev !== curr) {
         payload[`${opt.key}_id`] = curr;
+        if (curr) changed.push(opt.key);
       }
     });
 
@@ -93,16 +103,43 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
       }
 
       setSuccess(true);
-      setTimeout(() => {
-        setLoading(false);
-        onSuccess();
-        onClose();
-      }, 1000);
+      setLoading(false);
+
+      // If verification is required, stay open and show verify buttons
+      if (data.status === "pending_validation") {
+        setSavedToken(data.verificationToken || vToken);
+        setChangedPlatforms(changed);
+        setNeedsVerification(true);
+      } else {
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 1000);
+      }
     } catch (err) {
       setLoading(false);
       setError(err.message);
     }
   };
+
+  const token = savedToken || vToken;
+
+  // Verification sub-modal is open
+  if (verifyingPlatform) {
+    return (
+      <VerificationInstructionsModal
+        platform={verifyingPlatform}
+        username={usernames[verifyingPlatform]}
+        token={token}
+        userId={user.student_id}
+        onClose={() => setVerifyingPlatform(null)}
+        onSuccess={() => {
+          setVerifiedPlatforms((prev) => new Set([...prev, verifyingPlatform]));
+          onSuccess();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
@@ -111,7 +148,7 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
         data-aos="fade-in"
       >
         <button
-          onClick={onClose}
+          onClick={() => { onSuccess(); onClose(); }}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
           aria-label="Close"
         >
@@ -122,74 +159,149 @@ export default function UpdateProfileModal({ onClose, onSuccess, user }) {
           <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <FaUserPlus size={24} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Connect Profiles</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {needsVerification ? "Verify Profiles" : "Connect Profiles"}
+          </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Link your coding accounts to track standard progress
+            {needsVerification
+              ? "Prove ownership by adding the token to your profiles"
+              : "Link your coding accounts to track standard progress"}
           </p>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto px-1">
-            {optionList.map((opt) => (
-              <div
-                key={opt.key}
-                className="bg-gray-50 p-3 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors"
-              >
-                <label
-                  className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block"
-                  htmlFor={opt.key}
-                >
-                  {opt.label}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    id={opt.key}
-                    placeholder={`e.g. username_123`}
-                    value={usernames[opt.key]}
-                    onChange={(e) => handleChange(opt.key, e.target.value)}
-                    className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-medium"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
-              <FiAlertTriangle /> {error}
+        {token && (
+          <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                <FiInfo /> Verification Token
+              </p>
+              <p className="text-lg font-mono font-bold text-blue-900">{token}</p>
             </div>
-          )}
-          {success && (
-            <div className="p-3 bg-green-50 text-green-600 text-sm rounded-lg flex items-center gap-2">
-              <FiCheck /> Profiles connected successfully!
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <button
               type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-100 transition-colors"
-              disabled={loading}
+              onClick={() => {
+                navigator.clipboard.writeText(token);
+                toast.success("Token copied!");
+              }}
+              className="p-2 bg-white text-blue-600 rounded-lg shadow-sm hover:bg-blue-50 transition-colors"
+              title="Copy Token"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:shadow-blue-500/40 transition-all"
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Spinner /> Saving...
-                </span>
-              ) : (
-                "Save Changes"
-              )}
+              <FiCopy size={18} />
             </button>
           </div>
-        </form>
+        )}
+
+        {/* After save with verification required: show per-platform verify buttons */}
+        {needsVerification ? (
+          <div className="space-y-3">
+            {optionList
+              .filter((opt) => usernames[opt.key])
+              .map((opt) => {
+                const wasJustChanged = changedPlatforms.includes(opt.key);
+                const wasVerifiedNow = verifiedPlatforms.has(opt.key);
+                const existingStatus = user.coding_profiles?.[`${opt.key}_status`];
+                const isVerified = wasVerifiedNow || (!wasJustChanged && existingStatus === "accepted");
+                return (
+                  <div
+                    key={opt.key}
+                    className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100"
+                  >
+                    <div>
+                      <span className="text-sm font-semibold text-gray-800">{opt.label}</span>
+                      <span className="ml-2 text-xs text-gray-400">{usernames[opt.key]}</span>
+                    </div>
+                    {isVerified ? (
+                      <span className="text-xs font-semibold text-green-600 flex items-center gap-1">
+                        <FiCheck /> Verified
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setVerifyingPlatform(opt.key)}
+                        className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+                      >
+                        <FiShield size={12} /> Verify
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+            <div className="pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { onSuccess(); onClose(); }}
+                className="w-full px-5 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-100 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Normal edit form */
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto px-1">
+              {optionList.map((opt) => (
+                <div
+                  key={opt.key}
+                  className="bg-gray-50 p-3 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors"
+                >
+                  <label
+                    className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block"
+                    htmlFor={opt.key}
+                  >
+                    {opt.label}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      id={opt.key}
+                      placeholder={`e.g. username_123`}
+                      value={usernames[opt.key]}
+                      onChange={(e) => handleChange(opt.key, e.target.value)}
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-medium"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
+                <FiAlertTriangle /> {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 text-green-600 text-sm rounded-lg flex items-center gap-2">
+                <FiCheck /> Updates saved.
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-100 transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:shadow-blue-500/40 transition-all"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner /> Saving...
+                  </span>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
