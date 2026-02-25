@@ -78,6 +78,9 @@ const CodingPointsReport = lazy(() =>
 const AdminPlatformStatistics = lazy(() =>
   import("../../components/ui/AdminPlatformStatistics")
 );
+const AdminWeeklyProgressReports = lazy(() =>
+  import("../../components/ui/AdminWeeklyProgressReports")
+);
 const PlacementEligibilityFilter = lazy(() =>
   import("../../components/ui/PlacementEligibilityFilter")
 );
@@ -209,6 +212,7 @@ function AdminDashboard() {
   const menuItems = [
     { key: "Analytics", label: "Analytics Dashboard", icon: <FiBarChart2 /> },
     { key: "PlatformStatistics", label: "Platform Statistics", icon: <FiBarChart2 /> },
+    { key: "WeeklyProgressReports", label: "Weekly Progress Reports", icon: <FiTrendingUp /> },
     { key: "StudentRanking", label: "Student Ranking", icon: <FiBarChart2 /> },
     { key: "ManageStudents", label: "Manage Students", icon: <FiUsers /> },
     { key: "FacultyList", label: "Faculty List", icon: <FiUserCheck /> },
@@ -460,6 +464,12 @@ function AdminDashboard() {
             {selectedTab === "PlatformStatistics" && (
               <Suspense fallback={<LoadingSpinner />}>
                 <AdminPlatformStatistics />
+              </Suspense>
+            )}
+
+            {selectedTab === "WeeklyProgressReports" && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminWeeklyProgressReports />
               </Suspense>
             )}
 

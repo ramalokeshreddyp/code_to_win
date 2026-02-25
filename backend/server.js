@@ -3,11 +3,13 @@ const cors = require("cors");
 require("dotenv").config();
 const { logger } = require("./utils"); // <-- Add this line
 const cron = require("node-cron");
+const axios = require("axios");
 const {
   updateAllStudentsPerformance,
 } = require("./scrapers/scrapeAndUpdatePerformance");
 const visitorTracker = require("./middleware/visitorTracker");
 const app = express();
+const PORT = process.env.PORT || 3001;
 app.use(cors());
 
 // Middleware
@@ -53,6 +55,22 @@ cron.schedule("0 0 * * 6", async () => {
 
 // updateAllStudentsPerformance(); // Initial run on server start
 
+// Schedule: Every Monday at 00:05 - Capture weekly snapshot for analytics
+cron.schedule("5 0 * * 1", async () => {
+  logger.info("[CRON] Capturing weekly progress snapshot...");
+  try {
+    await axios.get(
+      `http://127.0.0.1:${PORT}/api/admin/analytics/weekly-progress?refresh=true`,
+      { timeout: 120000 }
+    );
+    logger.info("[CRON] Weekly progress snapshot captured.");
+  } catch (error) {
+    logger.error(
+      `[CRON] Error capturing weekly progress snapshot: ${error.message}`
+    );
+  }
+});
+
 // Schedule: Every day at 03:00 AM - Update rankings
 cron.schedule("0 3 * * *", async () => {
   logger.info("[CRON] Starting daily ranking update...");
@@ -79,7 +97,6 @@ cron.schedule("*/5 * * * *", async () => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () =>
   logger.info(`Server is running on http://localhost:${PORT}`)
 );

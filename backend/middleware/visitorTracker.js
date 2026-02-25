@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const crypto = require("crypto");
+const { logger } = require("../utils");
 
 const visitorTracker = async (req, res, next) => {
   try {
@@ -22,15 +23,12 @@ const visitorTracker = async (req, res, next) => {
       [sessionId]
     );
 
-    let isNewVisitor = false;
-
     if (existingSession.length === 0) {
       // New visitor for today
       await db.query(
         "INSERT INTO visitor_sessions (session_id, ip_address, user_agent, is_active) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE last_visit = CURRENT_TIMESTAMP, is_active = 1",
         [sessionId, ipAddress, userAgent]
       );
-      isNewVisitor = true;
 
       // Update daily stats only for new visitors
       const [existingStats] = await db.query(

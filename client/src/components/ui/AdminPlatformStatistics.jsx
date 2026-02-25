@@ -9,8 +9,10 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { FiBarChart2, FiFilter, FiRefreshCw } from "react-icons/fi";
+import { FiBarChart2, FiDownload, FiFilter, FiRefreshCw } from "react-icons/fi";
 import toast from "react-hot-toast";
+import domtoimage from "dom-to-image-more";
+import { jsPDF } from "jspdf";
 
 const YEAR_OPTIONS = [
   { value: "1", label: "First Year" },
@@ -24,6 +26,7 @@ const INITIAL_FILTERS = {
   year: "all",
   section: "all",
   degree: "all",
+  platform: "all",
 };
 
 const emptyStats = {
@@ -83,7 +86,9 @@ function AdminPlatformStatistics() {
   const [stats, setStats] = useState(emptyStats);
   const [sectionOptions, setSectionOptions] = useState([]);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const requestIdRef = useRef(0);
+  const exportPanelRef = useRef(null);
 
   const degreeOptions = useMemo(() => {
     const items = stats?.options?.degrees || [];
@@ -204,7 +209,95 @@ function AdminPlatformStatistics() {
     fetchStats(next, true);
   };
 
+  const handleExportPdf = async () => {
+    if (!exportPanelRef.current || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    try {
+      const target = exportPanelRef.current;
+      const targetWidth = Math.max(target.scrollWidth, target.clientWidth, 1);
+      const targetHeight = Math.max(target.scrollHeight, target.clientHeight, 1);
+
+      const dataUrl = await domtoimage.toPng(target, {
+        bgcolor: "#f9fafb",
+        cacheBust: true,
+        quality: 1,
+        width: targetWidth,
+        height: targetHeight,
+      });
+
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const canvasCtx = canvas.getContext("2d");
+      if (!canvasCtx) {
+        throw new Error("Canvas context not available for PDF export");
+      }
+      canvasCtx.drawImage(image, 0, 0);
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const pxPerMm = canvas.width / pdfWidth;
+      const pageHeightPx = Math.max(1, Math.floor(pdfHeight * pxPerMm));
+
+      let renderedPages = 0;
+      for (let sourceY = 0; sourceY < canvas.height; sourceY += pageHeightPx) {
+        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - sourceY);
+
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeightPx;
+
+        const ctx = pageCanvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Canvas context not available for PDF export");
+        }
+
+        ctx.drawImage(
+          canvas,
+          0,
+          sourceY,
+          canvas.width,
+          sliceHeightPx,
+          0,
+          0,
+          canvas.width,
+          sliceHeightPx
+        );
+
+        const pageData = pageCanvas.toDataURL("image/jpeg", 0.95);
+        const sliceHeightMm = sliceHeightPx / pxPerMm;
+
+        if (renderedPages > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(pageData, "JPEG", 0, 0, pdfWidth, sliceHeightMm, undefined, "FAST");
+        renderedPages += 1;
+      }
+
+      const timestamp = new Date().toISOString().split("T")[0];
+      pdf.save(`platform_statistics_${timestamp}.pdf`);
+      toast.success("Platform statistics exported to PDF");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to export platform statistics PDF");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const badgeData = (stats.hackerrank.badgeDistribution || []).slice(0, 8);
+  const selectedPlatform = filters.platform;
 
   const lcBreakdownData = [
     { label: "Easy", value: stats.leetcode.totalEasyProblems },
@@ -267,7 +360,7 @@ function AdminPlatformStatistics() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={exportPanelRef}>
       <div className="bg-white border border-gray-100 rounded-2xl p-4 md:p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
@@ -276,16 +369,26 @@ function AdminPlatformStatistics() {
             </h2>
             <p className="text-sm text-gray-500 mt-1">Aggregated cross-student analytics with dynamic filtering</p>
           </div>
-          <button
-            type="button"
-            onClick={() => fetchStats(filters)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          >
-            <FiRefreshCw /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+                onClick={handleExportPdf}
+                disabled={isExportingPdf}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+            >
+                <FiDownload /> {isExportingPdf ? "Exporting PDF..." : "Export to PDF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => fetchStats(filters)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              <FiRefreshCw /> Refresh
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div>
             <label className="text-xs text-gray-500 flex items-center gap-1 mb-1">
               <FiFilter /> Department
@@ -352,6 +455,22 @@ function AdminPlatformStatistics() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Platform</label>
+            <select
+              value={filters.platform}
+              onChange={(e) => updateFilter("platform", e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Overall</option>
+              <option value="leetcode">LeetCode</option>
+              <option value="gfg">GeeksforGeeks</option>
+              <option value="codechef">CodeChef</option>
+              <option value="hackerrank">HackerRank</option>
+              <option value="github">GitHub</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -371,72 +490,82 @@ function AdminPlatformStatistics() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <PlatformBlock
-              title="LeetCode"
-              statsGrid={[
-                <StatCard key="lc-total" title="Total Problems Solved" value={stats.leetcode.totalProblemsSolved} />,
-                <StatCard key="lc-contests" title="Total Contests" value={stats.leetcode.totalContestsAttended} />,
-                <StatCard
-                  key="lc-break"
-                  title="Easy / Medium / Hard"
-                  value={`${stats.leetcode.totalEasyProblems} / ${stats.leetcode.totalMediumProblems} / ${stats.leetcode.totalHardProblems}`}
-                />,
-                <StatCard key="lc-avg" title="Average Problems / Student" value={stats.leetcode.averageProblemsPerStudent} />,
-              ]}
-              chartTitle="Difficulty Breakdown"
-              chartData={lcBreakdownData}
-              color="#f59e0b"
-            />
+            {(selectedPlatform === "all" || selectedPlatform === "leetcode") && (
+              <PlatformBlock
+                title="LeetCode"
+                statsGrid={[
+                  <StatCard key="lc-total" title="Total Problems Solved" value={stats.leetcode.totalProblemsSolved} />,
+                  <StatCard key="lc-contests" title="Total Contests" value={stats.leetcode.totalContestsAttended} />,
+                  <StatCard
+                    key="lc-break"
+                    title="Easy / Medium / Hard"
+                    value={`${stats.leetcode.totalEasyProblems} / ${stats.leetcode.totalMediumProblems} / ${stats.leetcode.totalHardProblems}`}
+                  />,
+                  <StatCard key="lc-avg" title="Average Problems / Student" value={stats.leetcode.averageProblemsPerStudent} />,
+                ]}
+                chartTitle="Difficulty Breakdown"
+                chartData={lcBreakdownData}
+                color="#f59e0b"
+              />
+            )}
 
-            <PlatformBlock
-              title="GeeksforGeeks"
-              statsGrid={[
-                <StatCard key="gfg-total" title="Total Problems Solved" value={stats.gfg.totalProblemsSolved} />,
-                <StatCard key="gfg-contests" title="Total Contests" value={stats.gfg.totalContests} />,
-                <StatCard
-                  key="gfg-break"
-                  title="Easy / Medium / Hard"
-                  value={`${stats.gfg.totalEasy} / ${stats.gfg.totalMedium} / ${stats.gfg.totalHard}`}
-                />,
-                <StatCard key="gfg-bs" title="Basic / School" value={`${stats.gfg.totalBasic} / ${stats.gfg.totalSchool}`} />,
-              ]}
-              chartTitle="Category Breakdown"
-              chartData={gfgBreakdownData}
-              color="#16a34a"
-            />
+            {(selectedPlatform === "all" || selectedPlatform === "gfg") && (
+              <PlatformBlock
+                title="GeeksforGeeks"
+                statsGrid={[
+                  <StatCard key="gfg-total" title="Total Problems Solved" value={stats.gfg.totalProblemsSolved} />,
+                  <StatCard key="gfg-contests" title="Total Contests" value={stats.gfg.totalContests} />,
+                  <StatCard
+                    key="gfg-break"
+                    title="Easy / Medium / Hard"
+                    value={`${stats.gfg.totalEasy} / ${stats.gfg.totalMedium} / ${stats.gfg.totalHard}`}
+                  />,
+                  <StatCard key="gfg-bs" title="Basic / School" value={`${stats.gfg.totalBasic} / ${stats.gfg.totalSchool}`} />,
+                ]}
+                chartTitle="Category Breakdown"
+                chartData={gfgBreakdownData}
+                color="#16a34a"
+              />
+            )}
 
-            <PlatformBlock
-              title="CodeChef"
-              statsGrid={[
-                <StatCard key="cc-problems" title="Total Problems Solved" value={stats.codechef.totalProblemsSolved} />,
-                <StatCard key="cc-contests" title="Total Contests Written" value={stats.codechef.totalContestsWritten} />,
-              ]}
-              chartTitle="Problems vs Contests"
-              chartData={codechefData}
-              color="#2563eb"
-            />
+            {(selectedPlatform === "all" || selectedPlatform === "codechef") && (
+              <PlatformBlock
+                title="CodeChef"
+                statsGrid={[
+                  <StatCard key="cc-problems" title="Total Problems Solved" value={stats.codechef.totalProblemsSolved} />,
+                  <StatCard key="cc-contests" title="Total Contests Written" value={stats.codechef.totalContestsWritten} />,
+                ]}
+                chartTitle="Problems vs Contests"
+                chartData={codechefData}
+                color="#2563eb"
+              />
+            )}
 
-            <PlatformBlock
-              title="HackerRank"
-              statsGrid={[
-                <StatCard key="hr-total" title="Total Badges" value={stats.hackerrank.totalBadges} />,
-                <StatCard key="hr-badges" title="Badge Categories" value={stats.hackerrank.badgeDistribution.length} />,
-              ]}
-              chartTitle="Badge-wise Student Distribution"
-              chartData={hackerrankBadgeSummary}
-              dataKey="students"
-              xAxisKey="badge"
-              color="#7c3aed"
-            />
+            {(selectedPlatform === "all" || selectedPlatform === "hackerrank") && (
+              <PlatformBlock
+                title="HackerRank"
+                statsGrid={[
+                  <StatCard key="hr-total" title="Total Badges" value={stats.hackerrank.totalBadges} />,
+                  <StatCard key="hr-badges" title="Badge Categories" value={stats.hackerrank.badgeDistribution.length} />,
+                ]}
+                chartTitle="Badge-wise Student Distribution"
+                chartData={hackerrankBadgeSummary}
+                dataKey="students"
+                xAxisKey="badge"
+                color="#7c3aed"
+              />
+            )}
 
-            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3 lg:col-span-2">
-              <h3 className="text-lg font-semibold text-gray-900">GitHub</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <StatCard title="Total Public Repositories" value={stats.github.totalPublicRepositories} />
-                <StatCard title="Total Contributions" value={stats.github.totalContributions} />
-                <StatCard title="Active GitHub Students" value={stats.github.totalActiveStudents} />
+            {(selectedPlatform === "all" || selectedPlatform === "github") && (
+              <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3 lg:col-span-2">
+                <h3 className="text-lg font-semibold text-gray-900">GitHub</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <StatCard title="Total Public Repositories" value={stats.github.totalPublicRepositories} />
+                  <StatCard title="Total Contributions" value={stats.github.totalContributions} />
+                  <StatCard title="Active GitHub Students" value={stats.github.totalActiveStudents} />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3 lg:col-span-2">
               <h3 className="text-lg font-semibold text-gray-900">Top Departments (Filtered)</h3>
