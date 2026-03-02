@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ export default function RankingScreen({ navigation, tab = false }) {
   const [allRankings, setAllRankings] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  const fetchRankings = async () => {
+  const fetchRankings = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filters.dept) params.append('dept', filters.dept);
@@ -49,7 +49,7 @@ export default function RankingScreen({ navigation, tab = false }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.dept, filters.year, filters.section]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -59,7 +59,7 @@ export default function RankingScreen({ navigation, tab = false }) {
 
   useEffect(() => {
     fetchRankings();
-  }, [filters.dept, filters.year, filters.section]);
+  }, [fetchRankings]);
 
   // Filter rankings locally by search
   const filteredRankings = allRankings.filter((student) => {

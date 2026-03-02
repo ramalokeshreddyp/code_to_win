@@ -18,9 +18,9 @@ export function MetaProvider({ children }) {
       const [deptsData, yearsData, sectionsData] = await Promise.all([
         apiFetch('/meta/depts'),
         apiFetch('/meta/years'),
-        apiFetch('/meta/sections')
+        apiFetch('/meta/sections'),
       ]);
-      
+
       setDepts(Array.isArray(deptsData) ? deptsData : []);
       setYears(Array.isArray(yearsData) ? yearsData : []);
       setSections(Array.isArray(sectionsData) ? sectionsData : []);

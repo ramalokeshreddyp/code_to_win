@@ -1,13 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  RefreshControl,
-  TextInput,
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,7 +22,7 @@ export default function HeadDashboard() {
   const [filters, setFilters] = useState({ year: '', section: '' });
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const data = await apiFetch(
         `/hod/profile?userId=${currentUser.hod_id || currentUser.user_id}`
@@ -39,9 +31,9 @@ export default function HeadDashboard() {
     } catch (err) {
       console.error('Failed to fetch profile:', err);
     }
-  };
+  }, [currentUser.hod_id, currentUser.user_id]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     if (!profile) return;
     try {
       const params = new URLSearchParams({
@@ -55,9 +47,9 @@ export default function HeadDashboard() {
       console.error('Failed to fetch students:', err);
       setStudents([]);
     }
-  };
+  }, [filters.section, filters.year, profile]);
 
-  const fetchFaculty = async () => {
+  const fetchFaculty = useCallback(async () => {
     if (!profile) return;
     try {
       const data = await apiFetch(`/hod/faculty?dept=${profile.dept_code}`);
@@ -66,7 +58,7 @@ export default function HeadDashboard() {
       console.error('Failed to fetch faculty:', err);
       setFaculty([]);
     }
-  };
+  }, [profile]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -76,14 +68,14 @@ export default function HeadDashboard() {
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   useEffect(() => {
     if (profile) {
       fetchStudents();
       fetchFaculty();
     }
-  }, [profile, filters]);
+  }, [profile, fetchStudents, fetchFaculty]);
 
   if (!profile) {
     return (

@@ -17,7 +17,7 @@ export const ThemeProvider = ({ children }) => {
       setColorScheme('light');
       console.log('Device theme changed to: light');
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, setColorScheme]);
 
   const toggleTheme = () => {
     // Optional: implement later if you want manual override

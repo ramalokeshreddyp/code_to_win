@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import PlatformCard from '../../components/ui/PlatformCard';
@@ -126,7 +126,7 @@ export default function StudentDashboard({ navigation }) {
           <View className="mb-4 rounded-lg border-l-4 border-yellow-400 bg-yellow-50 p-4">
             <Text className="mb-1 text-sm font-medium text-yellow-800">Platform Update Issues</Text>
             <Text className="text-sm text-yellow-700">
-              Some platforms temporarily suspended due to connection issues. We'll retry
+              Some platforms temporarily suspended due to connection issues. We&apos;ll retry
               automatically.
             </Text>
           </View>

@@ -22,8 +22,6 @@ const AppNavigation = () => {
 
   if (loading) return <Stack.Screen name="Home" component={Home} />; // or show a splash/loading screen
 
-
-
   const StudentTabs = () => (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -37,8 +35,7 @@ const AppNavigation = () => {
         tabBarActiveTintColor: '#3B82F6',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
-      })}
-    >
+      })}>
       <Tab.Screen name="Home" component={StudentDashboard} options={{ title: 'Dashboard' }} />
       <Tab.Screen name="Rankings" component={RankingScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
@@ -58,9 +55,10 @@ const AppNavigation = () => {
         return () => (
           <View className="flex-1 items-center justify-center p-6">
             <Ionicons name="desktop" size={64} color="#9CA3AF" />
-            <Text className="text-lg font-semibold mt-4 text-center">Admin Dashboard</Text>
-            <Text className="text-gray-600 text-center mt-2">
-              Admin features are only available on the web platform. Please use a computer to access admin functions.
+            <Text className="mt-4 text-center text-lg font-semibold">Admin Dashboard</Text>
+            <Text className="mt-2 text-center text-gray-600">
+              Admin features are only available on the web platform. Please use a computer to access
+              admin functions.
             </Text>
           </View>
         );

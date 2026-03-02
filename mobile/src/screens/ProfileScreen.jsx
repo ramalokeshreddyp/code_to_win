@@ -49,7 +49,7 @@ export default function ProfileScreen() {
       await checkAuth();
       setEditingPersonal(false);
       Alert.alert('Success', 'Personal details updated successfully');
-    } catch (err) {
+    } catch (_err) {
       Alert.alert('Error', 'Failed to update personal details');
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export default function ProfileScreen() {
       await checkAuth();
       setEditingProfiles(false);
       Alert.alert('Success', 'Coding profiles updated successfully');
-    } catch (err) {
+    } catch (_err) {
       Alert.alert('Error', 'Failed to update coding profiles');
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
-    
+
     setLoading(true);
     try {
       await apiFetch('/student/change-password', {
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
       setEditingPassword(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       Alert.alert('Success', 'Password changed successfully');
-    } catch (err) {
+    } catch (_err) {
       Alert.alert('Error', 'Failed to change password');
     } finally {
       setLoading(false);
@@ -215,8 +215,8 @@ export default function ProfileScreen() {
         </View>
 
         {/* Change Password */}
-        <View className="bg-white rounded-lg p-4 mb-4 shadow-sm">
-          <View className="flex-row justify-between items-center mb-3">
+        <View className="mb-4 rounded-lg bg-white p-4 shadow-sm">
+          <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-lg font-semibold">Change Password</Text>
             {!editingPassword ? (
               <TouchableOpacity onPress={() => setEditingPassword(true)}>
@@ -233,42 +233,48 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
-          
+
           {editingPassword ? (
             <>
               <View className="mb-3">
-                <Text className="text-sm text-gray-600 mb-1">Current Password</Text>
+                <Text className="mb-1 text-sm text-gray-600">Current Password</Text>
                 <TextInput
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className="rounded border border-gray-300 px-3 py-2"
                   value={passwordData.currentPassword}
-                  onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
+                  onChangeText={(text) =>
+                    setPasswordData((prev) => ({ ...prev, currentPassword: text }))
+                  }
                   placeholder="Enter current password"
                   secureTextEntry
                 />
               </View>
               <View className="mb-3">
-                <Text className="text-sm text-gray-600 mb-1">New Password</Text>
+                <Text className="mb-1 text-sm text-gray-600">New Password</Text>
                 <TextInput
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className="rounded border border-gray-300 px-3 py-2"
                   value={passwordData.newPassword}
-                  onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
+                  onChangeText={(text) =>
+                    setPasswordData((prev) => ({ ...prev, newPassword: text }))
+                  }
                   placeholder="Enter new password"
                   secureTextEntry
                 />
               </View>
               <View className="mb-3">
-                <Text className="text-sm text-gray-600 mb-1">Confirm New Password</Text>
+                <Text className="mb-1 text-sm text-gray-600">Confirm New Password</Text>
                 <TextInput
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className="rounded border border-gray-300 px-3 py-2"
                   value={passwordData.confirmPassword}
-                  onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
+                  onChangeText={(text) =>
+                    setPasswordData((prev) => ({ ...prev, confirmPassword: text }))
+                  }
                   placeholder="Confirm new password"
                   secureTextEntry
                 />
               </View>
             </>
           ) : (
-            <Text className="text-gray-600 py-2">••••••••</Text>
+            <Text className="py-2 text-gray-600">••••••••</Text>
           )}
         </View>
 

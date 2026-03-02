@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,10 @@ import {
   Modal,
   Alert,
   RefreshControl,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
-import { useMeta } from '../../contexts/MetaContext';
 import { apiFetch } from '../../utils';
 import NotificationBell from '../../components/ui/NotificationBell';
 import StatsCard from '../../components/ui/StatsCard';
@@ -29,16 +27,16 @@ export default function FacultyDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState('dashboard');
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const data = await apiFetch(`/faculty/profile?userId=${currentUser.faculty_id}`);
       setProfile(data);
     } catch (err) {
       console.error('Failed to fetch profile:', err);
     }
-  };
+  }, [currentUser.faculty_id]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     if (!profile) return;
     try {
       const data = await apiFetch(
@@ -49,9 +47,9 @@ export default function FacultyDashboard() {
       console.error('Failed to fetch students:', err);
       setStudents([]);
     }
-  };
+  }, [profile]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     if (!profile) return;
     try {
       const data = await apiFetch(
@@ -62,7 +60,7 @@ export default function FacultyDashboard() {
       console.error('Failed to fetch requests:', err);
       setRequests([]);
     }
-  };
+  }, [profile]);
 
   const handleVerification = async (studentId, platform, action) => {
     try {
@@ -102,7 +100,7 @@ export default function FacultyDashboard() {
 
       // Refresh the main requests list
       await fetchRequests();
-    } catch (err) {
+    } catch (_err) {
       Alert.alert('Error', 'Failed to verify profile');
     }
   };
@@ -115,14 +113,14 @@ export default function FacultyDashboard() {
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   useEffect(() => {
     if (profile) {
       fetchStudents();
       fetchRequests();
     }
-  }, [profile]);
+  }, [profile, fetchStudents, fetchRequests]);
 
   const groupedRequests = Array.isArray(requests)
     ? requests.reduce((acc, req) => {
@@ -131,16 +129,6 @@ export default function FacultyDashboard() {
         return acc;
       }, {})
     : {};
-
-  const getProfileLink = (platform, username) => {
-    const links = {
-      leetcode: `https://leetcode.com/${username}`,
-      geeksforgeeks: `https://auth.geeksforgeeks.org/user/${username}/`,
-      codechef: `https://www.codechef.com/users/${username}`,
-      hackerrank: `https://www.hackerrank.com/${username}`,
-    };
-    return links[platform] || '#';
-  };
 
   if (!profile) {
     return (

@@ -11,7 +11,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     setLoading(true);
-    const { success, role: userRole, message } = await login(userId, password, role);
+    const { success, message } = await login(userId, password, role);
     setLoading(false);
     if (!success) {
       Alert.alert('Login Failed', message);
