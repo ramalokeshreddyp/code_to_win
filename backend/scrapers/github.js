@@ -7,6 +7,47 @@ const cheerio = require("cheerio");
 const { logger, extractUsername, sleep } = require("../utils");
 const config = require("../config");
 
+const buildHeaders = (extraHeaders = {}) => ({
+  ...config.REQUEST_HEADERS,
+  ...extraHeaders,
+});
+
+const parseCounterText = (text = "") => {
+  const numeric = String(text).replace(/[^\d]/g, "");
+  return numeric ? parseInt(numeric, 10) : 0;
+};
+
+const parsePublicReposFromProfileHtml = (html) => {
+  const $ = cheerio.load(html);
+
+  const repoCounter =
+    $("a[href$='?tab=repositories'] span.Counter").first().text().trim() ||
+    $("a[href$='?tab=repositories'] .Counter").first().text().trim() ||
+    $("a[data-tab-item='repositories'] .Counter").first().text().trim();
+
+  return parseCounterText(repoCounter);
+};
+
+const parseContributionsFromHtml = (html) => {
+  const $ = cheerio.load(html);
+
+  const match = String(html).match(
+    /([\d,]+)\s+contributions\s+in\s+the\s+last\s+year/i
+  );
+  if (match) {
+    return parseInt(match[1].replace(/,/g, ""), 10);
+  }
+
+  // Fallback for minor markup shifts where the count appears in heading text.
+  const headingText = $("h2").text().trim();
+  const headingMatch = headingText.match(/([\d,]+)/);
+  if (headingMatch) {
+    return parseInt(headingMatch[1].replace(/,/g, ""), 10);
+  }
+
+  return 0;
+};
+
 /**
  * Fetch GitHub data (Hybrid approach)
  * @param {string} url - GitHub profile URL
@@ -28,67 +69,91 @@ async function scrapeGitHubProfile(url) {
     // Add rate limiting
     await sleep(config.RATE_LIMIT_DELAY);
 
-    // 1. Fetch public repositories via official REST API
-    const apiResponse = await axios.get(
-      `https://api.github.com/users/${username}`,
-      {
-        timeout: config.REQUEST_TIMEOUT,
-      }
+    // 1. Try GitHub REST API for repo count first.
+    let publicRepos = 0;
+    let repoSource = "api";
+    const apiHeaders = buildHeaders(
+      process.env.GITHUB_TOKEN
+        ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+        : {}
     );
 
-    if (apiResponse.status !== 200) {
-      throw new Error(
-        `GitHub API returned status code: ${apiResponse.status}`
+    try {
+      const apiResponse = await axios.get(
+        `https://api.github.com/users/${username}`,
+        {
+          timeout: config.REQUEST_TIMEOUT,
+          headers: apiHeaders,
+        }
       );
-    }
 
-    const publicRepos = apiResponse.data.public_repos || 0;
+      if (apiResponse.status === 200) {
+        publicRepos = apiResponse.data.public_repos || 0;
+      } else {
+        throw new Error(`GitHub API returned status code: ${apiResponse.status}`);
+      }
+    } catch (apiErr) {
+      const status = apiErr?.response?.status;
+      if (status === 404) {
+        throw new Error("GitHub profile not found");
+      }
+
+      repoSource = "html";
+      logger.warn(
+        `[SCRAPING] GitHub API unavailable for ${username}. Falling back to profile HTML: ${apiErr.message}`
+      );
+
+      const profilePageResponse = await axios.get(`https://github.com/${username}`, {
+        timeout: config.REQUEST_TIMEOUT,
+        headers: buildHeaders(),
+      });
+
+      if (profilePageResponse.status !== 200) {
+        throw new Error(
+          `GitHub profile page returned status code: ${profilePageResponse.status}`
+        );
+      }
+
+      publicRepos = parsePublicReposFromProfileHtml(profilePageResponse.data);
+    }
 
     // Add delay between requests to rate limiting
     await sleep(config.RATE_LIMIT_DELAY);
 
     // 2. Fetch total contributions via fragment URL (GitHub lazy-loads this)
-    const profileResponse = await axios.get(
-      `https://github.com/users/${username}/contributions`,
-      {
-        timeout: config.REQUEST_TIMEOUT,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-      }
-    );
+    let totalContributions = 0;
+    try {
+      const profileResponse = await axios.get(
+        `https://github.com/users/${username}/contributions`,
+        {
+          timeout: config.REQUEST_TIMEOUT,
+          headers: buildHeaders({ "X-Requested-With": "XMLHttpRequest" }),
+        }
+      );
 
-    if (profileResponse.status !== 200) {
-      throw new Error(
-        `GitHub profile page returned status code: ${profileResponse.status}`
+      if (profileResponse.status === 404) {
+        throw new Error("GitHub profile not found");
+      }
+
+      if (profileResponse.status !== 200) {
+        throw new Error(
+          `GitHub profile page returned status code: ${profileResponse.status}`
+        );
+      }
+
+      totalContributions = parseContributionsFromHtml(profileResponse.data);
+    } catch (contributionErr) {
+      if (contributionErr.message === "GitHub profile not found") {
+        throw contributionErr;
+      }
+
+      logger.warn(
+        `[SCRAPING] Could not fetch contributions for ${username}, defaulting to 0: ${contributionErr.message}`
       );
     }
 
-    const $ = cheerio.load(profileResponse.data);
-
-    // Look for the contribution count in the header
-    // Use a regex to extract the count as GitHub uses inconsistent whitespace in the HTML
-    let totalContributions = 0;
-
-    // Use a robust regex to find "X contributions in the last year"
-    const match = profileResponse.data.match(
-      /([\d,]+)\s+contributions\s+in\s+the\s+last\s+year/i
-    );
-    if (match) {
-      totalContributions = parseInt(match[1].replace(/,/g, ""), 10);
-    } else {
-      // Fallback to text matching if regex fails on raw HTML
-      const pageText = $("h2").text().trim();
-      const textMatch = pageText.match(/([\d,]+)/);
-      if (textMatch) {
-        totalContributions = parseInt(textMatch[1].replace(/,/g, ""), 10);
-      }
-    }
-
     logger.info(
-      `[SCRAPING] GitHub data for ${username}: ${publicRepos} repos, ${totalContributions} contributions`
+      `[SCRAPING] GitHub data for ${username}: ${publicRepos} repos, ${totalContributions} contributions (repos source: ${repoSource})`
     );
 
     return {
