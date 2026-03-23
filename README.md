@@ -1,220 +1,259 @@
-# 🚀 Code to Win
+# Code to Win
 
 <div align="center">
+  <h2>Unified Coding Performance Intelligence Platform</h2>
+  <p>
+    A complete web and mobile system to collect coding activity, validate profiles,
+    calculate rankings, and power role-based decision making for Students, Faculty, HOD, and Admin.
+  </p>
 
-### Unified Coding Performance Intelligence Platform
-
-Aggregate, verify, score, and rank student coding performance across multiple platforms with role-based dashboards for Students, Faculty, HODs, and Admins.
-
-![Platform](https://img.shields.io/badge/Platform-Web%20%2B%20Mobile-blue)
-![Backend](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-green)
-![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61dafb)
-![Mobile](https://img.shields.io/badge/Mobile-React%20Native%20%2B%20Expo-4630eb)
-![Database](https://img.shields.io/badge/Database-MySQL-orange)
-![Auth](https://img.shields.io/badge/Auth-JWT-red)
-
+  <img alt="Platform" src="https://img.shields.io/badge/Platform-Web%20%2B%20Mobile-005f73" />
+  <img alt="Backend" src="https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-0a9396" />
+  <img alt="Frontend" src="https://img.shields.io/badge/Web-React%20%2B%20Vite-94d2bd" />
+  <img alt="Mobile" src="https://img.shields.io/badge/Mobile-React%20Native%20%2B%20Expo-ee9b00" />
+  <img alt="Database" src="https://img.shields.io/badge/Database-MySQL-ca6702" />
+  <img alt="Auth" src="https://img.shields.io/badge/Auth-JWT%20%2B%20RBAC-bb3e03" />
 </div>
 
 ---
 
-## 📌 Project Overview
+## Table of Contents
 
-**Code to Win** solves a practical institutional problem: student coding performance is scattered across platforms like LeetCode, CodeChef, GeeksforGeeks, HackerRank, and GitHub. This project centralizes that data and converts it into actionable insights through:
-
-- Automated scraping and scheduled updates
-- A configurable scoring + ranking engine
-- Role-aware dashboards and workflows
-- Verification pipelines for coding profiles and achievements
-- Reporting/export capabilities for placement and academic tracking
-
----
-
-## ✨ What This Project Delivers
-
-- 🎯 Unified coding performance view across platforms
-- 🧠 Multi-role governance (Student, Faculty, HOD, Admin)
-- 🔄 Automated cron-driven updates and ranking recalculation
-- 🔐 JWT-based auth with role-specific route protection
-- 📊 Rich analytics and report generation
-- 📱 Web + Mobile clients over one backend API
+1. [Project Overview](#project-overview)
+2. [Core Objectives](#core-objectives)
+3. [Tech Stack](#tech-stack)
+4. [System Architecture](#system-architecture)
+5. [Code Structure and Folder Organization](#code-structure-and-folder-organization)
+6. [Workflow Explanation](#workflow-explanation)
+7. [Execution Flow Diagrams](#execution-flow-diagrams)
+8. [Setup and Installation](#setup-and-installation)
+9. [Run Locally](#run-locally)
+10. [Usage Instructions](#usage-instructions)
+11. [Testing and Validation](#testing-and-validation)
+12. [Production Readiness Checklist](#production-readiness-checklist)
 
 ---
 
-## 🧰 Tech Stack
+## Project Overview
 
-| Layer | Technologies | Why Used |
+Code to Win addresses a common institutional problem: coding performance is fragmented across external platforms. This project unifies those signals into one governed system and converts raw activity into operational intelligence.
+
+The platform supports:
+
+- Consolidated tracking across LeetCode, CodeChef, GeeksforGeeks, HackerRank, and GitHub
+- Role-based access control for Student, Faculty, HOD, and Admin
+- Automated scraping and scheduled data refresh
+- Ranking computation and analytics
+- Exports, reports, and achievement workflows
+- Shared backend APIs for web and mobile applications
+
+---
+
+## Core Objectives
+
+- Build a reliable, multi-role coding analytics ecosystem
+- Automate collection and normalization of coding profile data
+- Provide transparent ranking and progress insights
+- Support verification and governance workflows across departments
+- Deliver a scalable architecture with clean separation of concerns
+
+---
+
+## Tech Stack
+
+| Layer | Technologies | Why It Was Chosen |
 |---|---|---|
-| Web Frontend | React, Vite, TailwindCSS, React Router | Fast UI iteration, optimized builds, modular pages |
-| Mobile Frontend | React Native, Expo, NativeWind, React Navigation | Shared product surface for on-the-go users |
-| Backend | Node.js, Express, node-cron, Winston | API orchestration, scheduling, observability |
-| Data | MySQL (`mysql2`) | Structured relational model for users, profiles, scores |
-| Scraping | Axios, Cheerio, Puppeteer/Playwright Core | Robust collection across varied platform page/API patterns |
-| Auth/Security | JWT, bcryptjs | Stateless authentication and secure password handling |
-| Export/Reports | ExcelJS, XLSX, PDF tooling | Placement and analytics workflows |
+| Web Frontend | React, Vite, Tailwind, React Router, React Query | Fast iteration, modular UI, optimized bundling |
+| Mobile Frontend | React Native, Expo, NativeWind, React Navigation | Cross-platform delivery with shared domain concepts |
+| Backend | Node.js, Express, node-cron, Winston | Clean API composition, scheduling, and observability |
+| Database | MySQL, mysql2 | Relational consistency for users, profiles, scores, and roles |
+| Auth and Security | JWT, bcryptjs | Stateless access and secure password verification |
+| Data Collection | Axios, Cheerio, Puppeteer, Playwright Core | Handles static and dynamic platform data surfaces |
+| Reporting | ExcelJS, XLSX, jsPDF, react-pdf | Export and reporting requirements for institution workflows |
 
 ---
 
-## 🏗️ Architecture at a Glance
+## System Architecture
 
 ```mermaid
 graph TD
-  U1[Student / Faculty / HOD / Admin] --> W[React Web App]
-  U2[Mobile Users] --> M[React Native App]
+  U1[Students / Faculty / HOD / Admin] --> W[Web App - React]
+  U2[Mobile Users] --> M[Mobile App - React Native]
 
-  W -->|/api| B[Express API Server]
-  M -->|/api| B
+  W -->|REST API| B[Express API]
+  M -->|REST API| B
 
-  B --> R1[Auth & Role Validation]
-  B --> R2[Business Routes]
-  B --> R3[Scraper Orchestration]
-  B --> R4[Exports & Reports]
+  B --> A1[Authentication and RBAC]
+  B --> A2[Role and Domain Routes]
+  B --> A3[Scraper Orchestration]
+  B --> A4[Analytics and Ranking]
+  B --> A5[Reports and Exports]
 
-  R1 --> DB[(MySQL)]
-  R2 --> DB
-  R3 --> DB
-  R4 --> DB
+  A1 --> DB[(MySQL)]
+  A2 --> DB
+  A3 --> DB
+  A4 --> DB
+  A5 --> DB
 
-  C[Node-Cron Scheduler] --> R3
-  R3 --> P1[LeetCode]
-  R3 --> P2[CodeChef]
-  R3 --> P3[GeeksforGeeks]
-  R3 --> P4[HackerRank]
-  R3 --> P5[GitHub]
+  A3 --> P1[LeetCode]
+  A3 --> P2[CodeChef]
+  A3 --> P3[GeeksforGeeks]
+  A3 --> P4[HackerRank]
+  A3 --> P5[GitHub]
 
+  C[node-cron Scheduler] --> A3
+  C --> A4
   B --> L[Winston Logs]
-  B --> F[Uploads / Exports Storage]
+  B --> F[Uploads and Exports]
 ```
 
 ---
 
-## 🗂️ Code Structure & Folder Organization
+## Code Structure and Folder Organization
 
 ```text
 code_to_win/
-├── backend/
-│   ├── config/                # DB and runtime config
-│   ├── routes/                # REST modules by domain/role
-│   ├── scrapers/              # Platform-specific collectors
-│   ├── middleware/            # Upload + visitor tracking
-│   ├── migrations/            # SQL migrations
-│   ├── utils/                 # Shared helpers and reporting
-│   ├── uploads/               # Certificates and uploaded files
-│   ├── exports/               # Generated export artifacts
-│   └── server.js              # API entrypoint + cron jobs
-├── client/
-│   ├── src/
-│   │   ├── pages/             # Screens and dashboards
-│   │   ├── components/        # Reusable UI blocks
-│   │   ├── context/           # Auth + meta providers
-│   │   └── utils/             # Client helpers
-│   └── vite.config.js         # Dev server + proxy config
-├── mobile/
-│   ├── src/
-│   │   ├── screens/           # Mobile screens
-│   │   ├── components/        # Mobile UI components
-│   │   ├── contexts/          # Mobile auth/meta state
-│   │   └── navigation/        # Stack/tab navigation
-│   └── App.jsx                # Mobile app root
-└── README.md / architecture.md / projectdocumentation.md
+|-- backend/
+|   |-- config/                 # DB and runtime configuration
+|   |-- routes/                 # REST APIs by domain and role
+|   |-- scrapers/               # Platform-specific scraper modules
+|   |-- middleware/             # Upload handling and visitor tracking
+|   |-- migrations/             # SQL migration files
+|   |-- utils/                  # Shared backend helpers and services
+|   |-- uploads/                # Stored certificates and assets
+|   |-- exports/                # Generated report and excel files
+|   `-- server.js               # API bootstrap + scheduled jobs
+|-- client/
+|   |-- src/
+|   |   |-- pages/              # Route-driven screens
+|   |   |-- components/         # Reusable UI components
+|   |   |-- context/            # Auth and metadata state
+|   |   `-- utils/              # Client-side helper logic
+|   `-- vite.config.js          # Dev server proxy and build tuning
+|-- mobile/
+|   |-- src/
+|   |   |-- screens/            # Mobile screen modules
+|   |   |-- components/         # Mobile reusable components
+|   |   |-- contexts/           # Mobile auth and app state
+|   |   `-- navigation/         # Navigation stacks and tabs
+|   `-- App.jsx                 # Mobile root entry
+|-- README.md
+|-- architecture.md
+`-- projectdocumentation.md
 ```
 
 ---
 
-## 🔄 Workflow Explanation
+## Workflow Explanation
 
-### 1) Authentication & Role Resolution
+### 1. Authentication and Role Routing
 
 ```mermaid
 sequenceDiagram
   participant User
-  participant Client as Web/Mobile Client
+  participant Client as Web or Mobile
   participant API as Express API
   participant DB as MySQL
 
-  User->>Client: Login(userId, password, role)
+  User->>Client: Enter credentials and role
   Client->>API: POST /api/auth/login
-  API->>DB: Validate user + password hash
-  DB-->>API: User record
-  API-->>Client: JWT + user payload
-  Client->>API: GET /api/auth/validate (Authorization token)
-  API-->>Client: valid + role + profile
-  Client-->>User: Route to role dashboard
+  API->>DB: Validate user and password hash
+  DB-->>API: User row
+  API-->>Client: JWT and user profile
+  Client->>API: GET /api/auth/validate
+  API-->>Client: valid role and permissions
+  Client-->>User: Redirect to role dashboard
 ```
 
-### 2) Scraping & Performance Update Cycle
+### 2. Scraping and Performance Update Workflow
 
 ```mermaid
 flowchart LR
-  A[Cron Trigger / Manual Refresh] --> B[Fetch active student profiles]
-  B --> C[For each platform username]
-  C --> D[Scrape platform data]
-  D --> E{Parse + validate success?}
-  E -->|Yes| F[Update student_performance]
-  E -->|No| G[Retry + mark suspended if failed]
-  F --> H[Create notifications if reactivated]
-  G --> H
-  H --> I[Recompute rankings]
-  I --> J[Persist + expose via APIs]
+  T[Scheduled or Manual Trigger] --> S[Load active student coding profiles]
+  S --> P[Process each platform handle]
+  P --> X[Scrape and parse platform data]
+  X --> V{Valid response?}
+  V -->|Yes| U[Normalize and persist performance]
+  V -->|No| R[Retry flow and fail counter]
+  R --> M{Max retries reached?}
+  M -->|Yes| N[Mark profile suspended and notify]
+  M -->|No| X
+  U --> Q[Run ranking recomputation]
+  N --> Q
+  Q --> D[Dashboards consume updated data]
 ```
 
-### 3) Dashboard Data Retrieval
+### 3. Governance and Verification Workflow
 
 ```mermaid
 flowchart TD
-  C1[Dashboard Loads] --> C2[AuthContext/MetaContext bootstrap]
-  C2 --> C3[Role-specific API calls]
-  C3 --> C4[Aggregate cards + tables + charts]
-  C4 --> C5[User actions: filter, export, verify, refresh]
-  C5 --> C3
+  ST[Student submits profile and achievements] --> RV[Faculty or HOD review queue]
+  RV --> AC{Approved?}
+  AC -->|Yes| EN[Enable accepted profile tracking]
+  AC -->|No| RE[Reject or suspend profile]
+  EN --> NT[Notify student]
+  RE --> NT
 ```
 
 ---
 
-## 🧭 Execution Flow Diagrams
+## Execution Flow Diagrams
 
-### API Request Lifecycle
+### Request Lifecycle
 
 ```mermaid
 flowchart TD
-  R1[HTTP Request] --> R2[CORS + JSON Middleware]
-  R2 --> R3[Visitor Tracker]
-  R3 --> R4[Global Request Logging]
-  R4 --> R5[Route Handler]
-  R5 --> R6[DB Query / Business Logic / Scraper]
-  R6 --> R7[Response + Structured Logging]
+  R1[Incoming HTTP request] --> R2[CORS and JSON middleware]
+  R2 --> R3[Visitor tracking middleware]
+  R3 --> R4[Global request logger]
+  R4 --> R5[Route handler and validation]
+  R5 --> R6[Business logic and DB operations]
+  R6 --> R7[Structured API response]
 ```
 
-### Scheduled Jobs Timeline
+### Scheduled Jobs and Automation
 
 ```mermaid
-gantt
-  title Scheduled Jobs (Server)
-  dateFormat  HH:mm
-  axisFormat %H:%M
-  section Daily
-  Ranking update                  :03:00, 10m
-  Visitor cleanup (every 5 mins)  :active, 00:00, 24h
-  section Weekly
-  Student performance scraping    :sat, 00:00, 60m
-  Weekly progress snapshot        :mon, 00:05, 15m
+flowchart TD
+  C1[Every 5 minutes] --> J1[Visitor cleanup]
+  C2[Saturday 00:00] --> J2[Student performance refresh]
+  C3[Monday 00:05] --> J3[Weekly progress snapshot]
+  C4[Daily 03:00] --> J4[Ranking update job]
+  J1 --> O[Operational consistency]
+  J2 --> O
+  J3 --> O
+  J4 --> O
+```
+
+### Data Flow Across Components
+
+```mermaid
+flowchart LR
+  UI[Web or Mobile UI] --> API[Express Routes]
+  API --> AUTH[JWT and Role Validation]
+  API --> SERVICE[Domain Services]
+  SERVICE --> DB[(MySQL)]
+  SERVICE --> EXT[External Coding Platforms]
+  SERVICE --> FILES[Export and Upload Storage]
+  DB --> API
+  API --> UI
 ```
 
 ---
 
-## ⚙️ Setup & Installation
+## Setup and Installation
 
-## Prerequisites
+### Prerequisites
 
-- Node.js 18+
-- npm 9+
-- MySQL 8+
-- Optional: PM2 for production process management
-- Optional (mobile): Android Studio / Xcode + Expo tooling
+- Node.js 18 or later
+- npm 9 or later
+- MySQL 8 or later
+- Expo CLI tooling for mobile development
 
-## 1) Clone and install
+### 1. Clone and install dependencies
 
 ```bash
-git clone <your-repository-url>
+git clone <repository-url>
 cd code_to_win
 npm install
 cd backend && npm install
@@ -223,11 +262,15 @@ cd ../mobile && npm install
 cd ..
 ```
 
-> Root `npm run install-all` installs root + backend + client. Install mobile separately.
+Optional shortcut for root, backend, and client:
 
-## 2) Configure backend environment
+```bash
+npm run install-all
+```
 
-Create `backend/.env`:
+### 2. Configure backend environment
+
+Create backend/.env:
 
 ```env
 DB_HOST=localhost
@@ -235,34 +278,42 @@ DB_USER=your_mysql_user
 DB_PASS=your_mysql_password
 DB_NAME=code_to_win
 PORT=5000
-JWT_SECRET=your_jwt_secret
-EMAIL_USER_1=optional_sender_1
-EMAIL_PASS_1=optional_sender_1_password
-EMAIL_USER_2=optional_sender_2
-EMAIL_PASS_2=optional_sender_2_password
+JWT_SECRET=your_secure_jwt_secret
+EMAIL_USER_1=sender_email_1
+EMAIL_PASS_1=sender_email_password_1
+EMAIL_USER_2=sender_email_2
+EMAIL_PASS_2=sender_email_password_2
 ```
 
-> Recommended `PORT=5000` because web proxy and mobile API defaults currently target port 5000.
-
-## 3) Create database and run SQL
+### 3. Initialize database
 
 ```sql
 CREATE DATABASE code_to_win;
 ```
 
-Then apply schema/migrations using SQL files in `backend/migrations/` and project SQL scripts.
+Then execute SQL scripts from backend/migrations and any required schema seed files for your environment.
 
-## 4) Run services locally
+### 4. Configure API endpoints
 
-### Option A (root web stack)
+- Web proxy points to http://localhost:5000 in client/vite.config.js
+- Mobile API base URL is set in mobile/src/utils.jsx and should be changed to your machine IP when testing on a physical device
+
+---
+
+## Run Locally
+
+### Option A: Run backend and web together
 
 ```bash
 npm run dev
 ```
 
-This starts backend (`backend`) and web client (`client`) concurrently.
+This launches:
 
-### Option B (manual)
+- Backend: nodemon server.js
+- Web: Vite dev server
+
+### Option B: Run each service manually
 
 ```bash
 # terminal 1
@@ -273,31 +324,87 @@ npm run dev
 cd client
 npm run dev
 
-# terminal 3 (optional mobile)
+# terminal 3 (optional)
 cd mobile
 npm start
 ```
 
----
+### Local endpoints
 
-## ▶️ How to Run Locally (Quick Paths)
-
-- Web App: open `http://localhost:1432`
-- API Server: `http://localhost:5000`
-- Mobile: Expo dev server via `npm start` inside `mobile`
-
-If backend runs on a different host/port, update:
-
-- `client/vite.config.js` proxy target
-- `mobile/src/utils.jsx` `API_URL`
+- Web app: http://localhost:1432
+- Backend API: http://localhost:5000
+- Mobile app: Expo dev server via npm start in mobile
 
 ---
 
-## 📘 Usage Instructions
+## Usage Instructions
 
 ### Student
 
-1. Log in with student role
+1. Log in with student role.
+2. View consolidated coding profile status.
+3. Track ranking, recent progress, and notifications.
+4. Submit or manage achievement artifacts where enabled.
+
+### Faculty
+
+1. Access section or department students.
+2. Verify coding profiles and submitted evidence.
+3. Monitor progress and generate exports.
+
+### HOD
+
+1. Review department-level performance analytics.
+2. Validate oversight workflows and escalations.
+3. Analyze rank distribution and trends.
+
+### Admin
+
+1. Manage global users and platform configurations.
+2. Trigger governance and reporting tasks.
+3. Review system-wide analytics and snapshots.
+
+---
+
+## Testing and Validation
+
+### Backend script validation
+
+```bash
+cd backend
+npm test
+```
+
+The backend test script performs syntax checks on JavaScript files.
+
+### Recommended integration checks
+
+- Validate login and token lifecycle on web and mobile
+- Verify profile scraping for at least one account per platform
+- Confirm ranking update reflects in dashboard APIs
+- Generate at least one export and download successfully
+- Confirm scheduled jobs run with expected log traces
+
+---
+
+## Production Readiness Checklist
+
+- Environment variables configured per deployment stage
+- Database migrations applied and verified
+- API host and proxy values aligned across clients
+- Logging retention and monitoring configured
+- Cron jobs validated in production timezone
+- Security review for JWT secret management and credential storage
+- Backup strategy for database and exported artifacts
+
+---
+
+## Documentation Index
+
+- architecture.md: Detailed system architecture and design decisions
+- projectdocumentation.md: End-to-end technical and operational documentation
+
+Code to Win is designed to remain maintainable, scalable, and governance-ready while delivering a polished, role-aware experience across web and mobile environments.
 2. Connect/verify coding profiles
 3. View dashboard cards + platform breakdown
 4. Trigger manual refresh

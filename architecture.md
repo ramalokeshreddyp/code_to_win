@@ -1,280 +1,330 @@
-# Architecture Documentation — Code to Win
+# Architecture Documentation - Code to Win
 
-## 1. Main Idea & Objective
+## 1. Main Idea and Objective
 
-Code to Win is an institutional coding intelligence platform that unifies student performance from multiple competitive programming ecosystems into one governed, role-based system. The architecture is designed to:
+Code to Win is designed as a centralized coding performance intelligence platform for educational institutions. The architecture focuses on collecting fragmented coding data from multiple external sources and transforming it into trustworthy, role-specific insights.
 
-- Aggregate heterogeneous platform data into a normalized model
-- Support operational workflows for Students, Faculty, HOD, and Admin
-- Provide analytics, ranking, verification, and reporting at scale
-- Automate repetitive collection/update tasks while preserving traceability
+Primary architecture goals:
+
+- Centralize coding performance data into one relational model
+- Support role-based operations for Student, Faculty, HOD, and Admin
+- Automate repetitive ingestion and ranking workflows
+- Keep the system modular, maintainable, and scalable
+- Preserve traceability through logging, notifications, and audit-friendly flows
 
 ---
 
-## 2. System Architecture & Design
+## 2. System Architecture and Design
 
-### 2.1 Layered Architecture
+### 2.1 Layered Architecture Model
 
 ```mermaid
 graph TB
   subgraph Presentation Layer
-    W[React Web App]
-    M[React Native Mobile App]
+    WEB[React Web Client]
+    MOB[React Native Mobile Client]
   end
 
-  subgraph Application Layer
-    A[Express API]
-    AU[Auth & RBAC]
-    BR[Business Routes]
-    SC[Scraper Coordinator]
-    RP[Reporting/Export Services]
+  subgraph API and Application Layer
+    API[Express API Gateway]
+    AUTH[Authentication and RBAC]
+    DOMAIN[Role and Domain Route Modules]
+    SCRAPE[Scraper Orchestrator]
+    ANALYTICS[Ranking and Analytics Services]
+    REPORT[Export and Report Services]
   end
 
-  subgraph Data & Ops Layer
+  subgraph Data and Operations Layer
     DB[(MySQL)]
-    FS[File Storage: uploads/exports]
-    LG[Winston Logging]
-    CR[Node-Cron Scheduler]
+    STORE[(Uploads and Exports Storage)]
+    LOGS[Winston Logs]
+    SCHED[node-cron Scheduler]
   end
 
-  W --> A
-  M --> A
-  A --> AU
-  A --> BR
-  A --> SC
-  A --> RP
+  WEB --> API
+  MOB --> API
 
-  AU --> DB
-  BR --> DB
-  SC --> DB
-  RP --> DB
-  RP --> FS
-  A --> LG
-  CR --> SC
-  CR --> BR
+  API --> AUTH
+  API --> DOMAIN
+  DOMAIN --> SCRAPE
+  DOMAIN --> ANALYTICS
+  DOMAIN --> REPORT
+
+  AUTH --> DB
+  SCRAPE --> DB
+  ANALYTICS --> DB
+  REPORT --> DB
+  REPORT --> STORE
+
+  API --> LOGS
+  SCHED --> SCRAPE
+  SCHED --> ANALYTICS
 ```
 
-### 2.2 External Integrations
+### 2.2 Integration Topology
 
 ```mermaid
 graph LR
-  SC[Scraper Coordinator] --> LC[LeetCode]
-  SC --> CC[CodeChef]
-  SC --> GFG[GeeksforGeeks]
-  SC --> HR[HackerRank]
-  SC --> GH[GitHub]
+  SC[Scraper Orchestrator] --> L1[LeetCode]
+  SC --> L2[CodeChef]
+  SC --> L3[GeeksforGeeks]
+  SC --> L4[HackerRank]
+  SC --> L5[GitHub]
 
-  BR[Business Routes] --> SMTP[SMTP/Gmail for onboarding mail]
-  RP[Reports/Exports] --> XLS[XLSX/Excel generation]
+  AU[Auth Module] --> SMTP[SMTP Email Service]
+  RP[Report Service] --> XLS[Excel and PDF Generators]
 ```
 
 ---
 
-## 3. Key Modules & Responsibilities
+## 3. Architecture Diagrams
 
-## Backend (`backend/`)
-
-| Module | Responsibility |
-|---|---|
-| `server.js` | API bootstrap, middleware chain, route mounting, scheduled tasks |
-| `routes/authRoutes.js` | Login/register/token validation, profile bootstrap, onboarding mail |
-| `routes/studentRoutes.js` | Student profile, refresh, personal dashboards |
-| `routes/facultyRoutes.js` | Verification workflows, assigned student operations |
-| `routes/hodRoutes.js` | Department-level governance and analytics access |
-| `routes/adminRoutes.js` | Global operations and user/platform administration |
-| `routes/rankingRoutes.js` | Ranking computation exposure and filter endpoints |
-| `routes/analyticsRoutes.js` | KPI and weekly progress analytics |
-| `routes/exportRoutes.js`, `reportRoutes.js` | Exports and report orchestration |
-| `scrapers/*` | Platform-specific data extraction and parsing |
-| `scrapers/scrapeAndUpdatePerformance.js` | Retry/suspension/reactivation logic + DB update coordination |
-| `middleware/visitorTracker.js` | Visitor activity tracking and operational visibility |
-| `config/db.js` | MySQL pool initialization via environment configuration |
-
-## Web (`client/`)
-
-| Module | Responsibility |
-|---|---|
-| `src/context/AuthContext.jsx` | Token validation, role/user state, protected flow |
-| `src/context/MetaContext.jsx` | Shared metadata loading (departments/years/sections) |
-| `src/App.jsx` | Role-based route map and access guards |
-| `vite.config.js` | API proxy + chunking strategy |
-
-## Mobile (`mobile/`)
-
-| Module | Responsibility |
-|---|---|
-| `src/contexts/AuthContext.jsx` | Token lifecycle via AsyncStorage |
-| `src/navigation/AppNavigation.jsx` | Role-resolved stack/tab navigation |
-| `src/utils.jsx` | API base URL + fetch abstraction |
-
----
-
-## 4. Workflow & Execution Architecture
-
-### 4.1 Authentication/Authorization Execution Flow
+### 3.1 Deployment-Level View
 
 ```mermaid
-sequenceDiagram
-  participant C as Client (Web/Mobile)
-  participant API as Auth API
-  participant DB as MySQL
-
-  C->>API: POST /api/auth/login
-  API->>DB: Fetch user by user_id + role
-  API->>API: bcrypt compare + status check
-  API-->>C: JWT + user payload
-
-  C->>API: GET /api/auth/validate (Authorization token)
-  API->>API: jwt.verify
-  API->>DB: Fetch canonical user/profile
-  API-->>C: valid + role + profile
+graph TD
+  U[Users] --> C1[Browser]
+  U --> C2[Mobile App]
+  C1 --> B[Node.js Express Server]
+  C2 --> B
+  B --> D[(MySQL Database)]
+  B --> F[(File Storage)]
+  B --> E[External Coding Platforms]
 ```
 
-### 4.2 Data Collection & Performance Update Flow
+### 3.2 Runtime Request Pipeline
 
 ```mermaid
 flowchart TD
-  T[Trigger: Cron or Manual Refresh] --> U[Fetch active coding profile links]
-  U --> V[Invoke platform scraper]
-  V --> W{Scrape success?}
-  W -->|Yes| X[Normalize metrics]
-  X --> Y[Update student_performance]
-  Y --> Z[If suspended: reactivate + notify]
-
-  W -->|No| R[Retry limited attempts]
-  R --> S{Exhausted retries?}
-  S -->|Yes| Q[Set platform status = suspended + notify]
-  S -->|No| V
-
-  Z --> N[Ranking recalculation]
-  Q --> N
-  N --> O[Analytics and dashboard read paths]
+  A[Incoming Request] --> B[CORS and Body Parsers]
+  B --> C[Visitor Tracking]
+  C --> D[Global Logger]
+  D --> E[Route Layer]
+  E --> F[Validation and Role Check]
+  F --> G[Service and DB/Scraper Call]
+  G --> H[JSON Response and Log Event]
 ```
 
-### 4.3 Dashboard Read Flow
+---
+
+## 4. Workflow Explanation
+
+### 4.1 Authentication and Role Bootstrap Flow
+
+```mermaid
+sequenceDiagram
+  participant Client as Web or Mobile Client
+  participant Auth as Auth Route
+  participant DB as MySQL
+
+  Client->>Auth: POST /api/auth/login
+  Auth->>DB: query users by user_id and role
+  Auth->>Auth: bcrypt password check
+  Auth-->>Client: JWT and user payload
+  Client->>Auth: GET /api/auth/validate
+  Auth->>DB: fetch canonical user record
+  Auth-->>Client: valid status and role metadata
+```
+
+### 4.2 Scheduled Ingestion Workflow
 
 ```mermaid
 flowchart LR
-  D1[UI loads dashboard] --> D2[Auth + meta context bootstrap]
-  D2 --> D3[Role-specific API query set]
-  D3 --> D4[Join: profile + performance + rank + notifications]
-  D4 --> D5[Render cards/charts/tables]
+  J1[Saturday 00:00 Job] --> P1[Load active platform handles]
+  P1 --> P2[Scrape platform data]
+  P2 --> P3{Success?}
+  P3 -->|Yes| P4[Normalize and persist]
+  P3 -->|No| P5[Retry and increment failure state]
+  P5 --> P6{Max failures reached?}
+  P6 -->|Yes| P7[Mark suspended and notify]
+  P6 -->|No| P2
+  P4 --> P8[Recompute rankings]
+  P7 --> P8
 ```
 
----
-
-## 5. Data Architecture
-
-### 5.1 High-Level Entity Relationship View
+### 4.3 Department Governance Workflow
 
 ```mermaid
-erDiagram
-  USERS ||--o| STUDENT_PROFILES : has
-  USERS ||--o| FACULTY_PROFILES : has
-  USERS ||--o| HOD_PROFILES : has
-
-  STUDENT_PROFILES ||--|| STUDENT_PERFORMANCE : owns
-  STUDENT_PROFILES ||--|| STUDENT_CODING_PROFILES : owns
-  STUDENT_PROFILES ||--o{ NOTIFICATIONS : receives
-  STUDENT_PROFILES ||--o{ ACHIEVEMENTS : submits
-
-  DEPT ||--o{ STUDENT_PROFILES : contains
-  DEPT ||--o{ FACULTY_PROFILES : contains
+flowchart TD
+  S[Student data enters system] --> F[Faculty verification]
+  F --> H[HOD oversight]
+  H --> A[Admin governance actions]
+  A --> R[Reports and exports]
 ```
 
-### 5.2 Data Consistency Strategy
+---
 
-- Numeric coercion in scraper coordinator before persistence
-- Route-level validation and role checks
-- Suspension model for unstable external integrations
-- Notification events emitted on state transition (suspended → accepted)
+## 5. Key Modules and Responsibilities
+
+### 5.1 Backend Modules
+
+| Module | Responsibility |
+|---|---|
+| server.js | API startup, middleware chain, route registration, cron jobs |
+| config/db.js | MySQL pool initialization and DB connectivity |
+| routes/authRoutes.js | Login, registration, JWT validation, onboarding email integration |
+| routes/studentRoutes.js | Student profile and personal performance workflows |
+| routes/facultyRoutes.js | Verification and supervised student operations |
+| routes/hodRoutes.js | Department-level governance and insights |
+| routes/adminRoutes.js | Global platform management and administrative actions |
+| routes/analyticsRoutes.js | Aggregated analytics and weekly progress endpoints |
+| routes/rankingRoutes.js | Ranking retrieval and filters |
+| routes/exportRoutes.js and routes/reportRoutes.js | Export generation and report orchestration |
+| scrapers/* | Platform-specific scraping and parsing logic |
+| scrapers/scrapeAndUpdatePerformance.js | Retry strategy, suspension model, update coordination |
+| middleware/visitorTracker.js | Visitor session lifecycle monitoring |
+
+### 5.2 Web Client Modules
+
+| Module | Responsibility |
+|---|---|
+| src/context/AuthContext.jsx | Authentication lifecycle and role state |
+| src/context/MetaContext.jsx | Shared metadata bootstrap |
+| src/pages/* | Role-specific dashboard screens and workflows |
+| src/components/* | Reusable UI blocks and modals |
+| vite.config.js | API proxy and build optimization |
+
+### 5.3 Mobile Client Modules
+
+| Module | Responsibility |
+|---|---|
+| src/contexts/* | Token and app state management |
+| src/navigation/* | Stack and tab route orchestration |
+| src/screens/* | Role-driven mobile screens |
+| src/utils.jsx | API URL and request abstraction |
 
 ---
 
-## 6. Crucial Components & Integration Details
+## 6. Data Flow and Execution Flow
 
-## 6.1 Scheduler Integration
+### 6.1 Application Data Flow
 
-- Weekly scraping execution (Saturday)
-- Weekly snapshot capture (Monday)
-- Daily ranking refresh
-- 5-minute visitor cleanup job
+```mermaid
+flowchart LR
+  UI[Web or Mobile UI] --> API[Express Route]
+  API --> VAL[Validation and RBAC]
+  VAL --> SVC[Domain Service]
+  SVC --> DB[(MySQL)]
+  SVC --> EXT[External Platforms]
+  DB --> API
+  API --> UI
+```
 
-## 6.2 Report & Export Integration
+### 6.2 Ranking Execution Flow
 
-- Export routes invoke service logic to produce XLSX/report artifacts
-- Files are persisted in project-managed storage directories
-- Download routes expose artifacts with access control
+```mermaid
+flowchart TD
+  A1[Read latest performance metrics] --> A2[Apply platform-wise weights]
+  A2 --> A3[Compute normalized score]
+  A3 --> A4[Sort by final score]
+  A4 --> A5[Persist rank and snapshot]
+  A5 --> A6[Expose through ranking endpoints]
+```
 
-## 6.3 Email Integration
+### 6.3 Reporting Execution Flow
 
-- Auth route uses SMTP transport rotation (`EMAIL_USER_*`, `EMAIL_PASS_*`)
-- New registration communication is sent after successful creation flow
-
----
-
-## 7. Tech Stack Choices (Why These)
-
-- **Node + Express**: lightweight API composition and route modularity
-- **MySQL**: relational consistency for role/profile/performance model
-- **React + Vite**: rapid development and optimized frontend delivery
-- **React Native + Expo**: fast mobile rollout with a shared product domain
-- **node-cron**: deterministic recurring operational tasks
-- **Winston**: structured logging for observability and issue triage
-- **Puppeteer/Cheerio/Axios**: adaptable scraping across static/dynamic targets
-
----
-
-## 8. Problem-Solving Approach
-
-1. **Normalize scattered coding signals** into one canonical schema
-2. **Automate ingestion** to reduce manual reporting overhead
-3. **Protect data quality** with retries, status transitions, and logging
-4. **Enable governance** via role-centric route segregation
-5. **Deliver actionable insights** through rankings, analytics, and exports
+```mermaid
+flowchart LR
+  R1[User selects report filters] --> R2[API validates request]
+  R2 --> R3[Aggregate required data]
+  R3 --> R4[Generate Excel or PDF artifact]
+  R4 --> R5[Store artifact path]
+  R5 --> R6[Return response or download link]
+```
 
 ---
 
-## 9. Advantages, Benefits, Pros & Cons
+## 7. Crucial Components and Integration Details
 
-## Advantages / Pros
+### 7.1 Scheduler and Background Operations
 
-- Unified academic + placement coding intelligence
-- Reduced manual tracking burden for faculty/admin teams
-- Strong extensibility for new routes/platform integrations
-- Transparent operational trail through logging and notifications
+- Weekly performance refresh: Saturday 00:00
+- Weekly analytics snapshot: Monday 00:05
+- Daily ranking refresh: 03:00
+- Visitor session cleanup: every 5 minutes
 
-## Trade-offs / Cons
+### 7.2 Authentication and Security Integration
 
-- External platform scraping can be brittle to markup/API changes
-- Cron-heavy behavior requires careful production monitoring
-- Mobile and web endpoint configuration must stay synchronized
-- Data freshness depends on schedule frequency and scraping success
+- JWT token generation and verification in auth route flow
+- Password hashing and comparison using bcryptjs
+- Role checks at route level to protect sensitive operations
 
----
+### 7.3 Data Collection Integration
 
-## 10. Reliability, Security, and Scalability Considerations
+- Each platform adapter transforms external response data into normalized metrics
+- Failed data fetches use retry and suspension transitions
+- State transitions can trigger notification and reactivation workflows
 
-## Security
+### 7.4 Report and Export Integration
 
-- JWT authentication and role-gated routes
-- Hashed password validation (bcrypt)
-- Controlled exposure of uploads and route-level data access
-
-## Reliability
-
-- Retry strategy in scraping pipeline
-- Automatic status fallback to suspended for repeated failures
-- Centralized logging for post-mortem/debugging
-
-## Scalability
-
-- Modular route/scraper decomposition
-- Clear separation between ingestion, query, and reporting concerns
-- Future option to split scheduler/scraper into dedicated worker process
+- Export routes use reporting utilities to generate structured files
+- Generated files are stored and served through controlled download routes
 
 ---
 
-## 11. Architecture Summary
+## 8. Tech Stack Selection Rationale
 
-The current architecture is a practical, production-oriented monorepo design balancing **feature velocity**, **operational automation**, and **institutional governance**. It is especially strong for campuses requiring consolidated coding-performance management with both web and mobile access.
+- Node.js and Express for modular APIs and fast backend iteration
+- MySQL for structured relational modeling of users, roles, and performance
+- React and Vite for performant, maintainable web dashboards
+- React Native and Expo for multi-device app delivery
+- node-cron for deterministic time-based automation
+- Winston for centralized and structured operational logging
+- Axios, Cheerio, Puppeteer, Playwright Core for robust scraping across heterogeneous sources
+
+---
+
+## 9. Problem-Solving Approach
+
+1. Normalize heterogeneous coding signals into one canonical model.
+2. Enforce role-specific governance in every key operation.
+3. Use automation to reduce manual tracking overhead.
+4. Protect data quality with retries, validation, and fallback status states.
+5. Enable insight and action through ranking, analytics, exports, and notifications.
+
+---
+
+## 10. Advantages, Benefits, Pros, and Cons
+
+### Advantages and Benefits
+
+- Single source of truth for coding performance
+- Reduced manual intervention for faculty and administration
+- Better transparency for student progress and ranking
+- Extensible architecture for future platform integrations
+- Shared backend for web and mobile channels
+
+### Trade-offs and Cons
+
+- Scraping can break when external platform structures change
+- Cron-driven workflows require disciplined monitoring in production
+- Configuration drift risk between web and mobile API endpoints
+- Heavy report generation may require queue-based scaling in larger deployments
+
+---
+
+## 11. Reliability, Scalability, and Performance Design
+
+### Reliability Patterns
+
+- Retry and suspension strategy for unstable external sources
+- Logging at request and scheduler layers for observability
+- Separation of ingestion, analytics, and reporting responsibilities
+
+### Scalability Patterns
+
+- Route-level modular decomposition
+- Service-oriented internal boundaries
+- Future-ready path to split scheduler and scraping into worker services
+
+### Performance Patterns
+
+- Vite chunking strategy for frontend performance
+- Targeted ranking update jobs instead of synchronous heavy computations per request
+- Pooled DB connectivity via mysql2
+
+---
+
+## 12. Architecture Summary
+
+The current architecture is a production-oriented, multi-client, role-governed full-stack system. It balances automation, data integrity, and extensibility while staying practical for institutional adoption and long-term growth.
