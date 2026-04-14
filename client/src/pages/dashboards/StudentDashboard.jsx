@@ -1,11 +1,8 @@
 import React, { useState, useCallback } from "react";
 import {
-  FiCheck,
   FiClock,
   FiCode,
   FiRefreshCw,
-  FiX,
-  FiPause,
   FiAlertTriangle,
   FiHome,
   FiUser,
@@ -24,18 +21,16 @@ import StatsCard from "../../components/ui/StatsCard";
 import PlatformCard from "../../components/ui/PlatformCard";
 import {
   EditModal,
-  UpdateProfileModal,
   UserResetPasswordModal,
 } from "../../components/Modals";
 import AchievementModal from "../../components/modals/AchievementModal";
 import SectionLeaderboard from "../../components/SectionLeaderboard";
-import Footer from "../../components/Footer";
+import OverallLeaderboard from "../../components/OverallLeaderboard";
 import { formatName, formatDepartment, formatSection } from "../../utils/textFormatter";
 
 const StudentDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [editProfile, setEditprofile] = useState(false);
-  const [updateProfile, setUpdateProfile] = useState(false);
   const [changepassword, setChangepassword] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
@@ -178,13 +173,6 @@ const StudentDashboard = () => {
             onClose={() => setEditprofile(false)}
           />
         )}
-        {updateProfile && (
-          <UpdateProfileModal
-            user={currentUser}
-            onSuccess={() => checkAuth()}
-            onClose={() => setUpdateProfile(false)}
-          />
-        )}
         {changepassword && (
           <UserResetPasswordModal
             user={currentUser}
@@ -265,14 +253,7 @@ const StudentDashboard = () => {
                         Track your progress, analyze your performance, and keep
                         pushing your limits across all coding platforms.
                       </p>
-
                       <div className="flex flex-wrap gap-3 mt-6">
-                        <button
-                          onClick={() => setUpdateProfile(true)}
-                          className="px-5 py-2.5 bg-white text-blue-700 font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-gray-50 transition-all flex items-center gap-2 cursor-pointer"
-                        >
-                          Connect Profiles
-                        </button>
                         <button
                           onClick={handleRefresh}
                           className="px-5 py-2.5 bg-blue-700/50 backdrop-blur-md text-white font-semibold rounded-xl border border-white/20 hover:bg-blue-700/70 transition-all flex items-center gap-2 cursor-pointer"
@@ -468,21 +449,6 @@ const StudentDashboard = () => {
                     />
                   )}
 
-                  {/* Add Platform Prompt - if few platforms connected */}
-                  <div
-                    onClick={() => setUpdateProfile(true)}
-                    className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer min-h-[200px]"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                      <FiCode size={24} />
-                    </div>
-                    <span className="font-semibold">
-                      Connect More Platforms
-                    </span>
-                    <span className="text-xs mt-1">
-                      Add CodeChef, HackerRank & more
-                    </span>
-                  </div>
                 </div>
               </>
             )}
@@ -578,13 +544,10 @@ const StudentDashboard = () => {
                     <h3 className="text-xl font-bold text-gray-900">
                       Connected Profiles
                     </h3>
-                    <button
-                      onClick={() => setUpdateProfile(true)}
-                      className="text-blue-600 font-medium hover:underline"
-                    >
-                      Manage Connections
-                    </button>
                   </div>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Coding profile links are locked after submission to maintain data consistency.
+                  </p>
                   <div className="space-y-4">
                     {[
                       "leetcode",
@@ -599,7 +562,6 @@ const StudentDashboard = () => {
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center p-2">
-                            {/* Simple fallback icons or logic to reuse PlatformCard icons could go here */}
                             <span className="font-bold text-gray-500">
                               {platform[0].toUpperCase()}
                             </span>
@@ -755,7 +717,10 @@ const StudentDashboard = () => {
             )}
 
             {selectedTab === "Leaderboard" && (
-              <SectionLeaderboard />
+              <div className="space-y-8">
+                <SectionLeaderboard />
+                <OverallLeaderboard />
+              </div>
             )}
           </main>
         </div>

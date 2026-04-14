@@ -234,6 +234,22 @@ router.post("/coding-profile", async (req, res) => {
   } = req.body;
   logger.info(`Submitting coding profiles: userId=${userId}`);
   try {
+    const platformKeys = [
+      "leetcode_id",
+      "codechef_id",
+      "geeksforgeeks_id",
+      "hackerrank_id",
+      "github_id",
+    ];
+
+    const hasIncomingProfileFields = platformKeys.some(
+      (key) => req.body[key] !== undefined
+    );
+
+    if (!hasIncomingProfileFields) {
+      return res.status(400).json({ message: "No coding profiles provided" });
+    }
+
     // Check verification requirement
     const [settings] = await db.query(
       "SELECT setting_value FROM system_settings WHERE setting_key = 'verification_required'"
@@ -249,6 +265,22 @@ router.post("/coding-profile", async (req, res) => {
       `SELECT * FROM student_coding_profiles WHERE student_id = ?`,
       [userId]
     );
+
+    if (existing.length > 0) {
+      const existingRow = existing[0];
+      const hasExistingProfileData = platformKeys.some((key) => {
+        const value = existingRow[key];
+        return value !== null && value !== undefined && String(value).trim() !== "";
+      });
+
+      // Keep profile links immutable once the student has submitted any profile.
+      if (hasExistingProfileData) {
+        return res.status(403).json({
+          message:
+            "Coding profiles are locked after initial submission. Please contact admin for changes.",
+        });
+      }
+    }
 
     // Build dynamic update fields
     const fields = [];

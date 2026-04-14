@@ -5,6 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "target": "ES2020",
+    "ignoreDeprecations": "6.0",
     "allowSyntheticDefaultImports": true,
     "baseUrl": "."
   },
