@@ -13,6 +13,17 @@ export function MetaProvider({ children }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const normalizeYears = (yearValues) => {
+    const canonicalYears = [1, 2, 3, 4];
+    const parsedYears = Array.isArray(yearValues)
+      ? yearValues
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value >= 1 && value <= 4)
+      : [];
+
+    return [...new Set([...canonicalYears, ...parsedYears])].sort((a, b) => a - b);
+  };
+
   const fetchMeta = async () => {
     try {
       const [deptsData, yearsData, sectionsData] = await Promise.all([
@@ -22,12 +33,12 @@ export function MetaProvider({ children }) {
       ]);
 
       setDepts(Array.isArray(deptsData) ? deptsData : []);
-      setYears(Array.isArray(yearsData) ? yearsData : []);
+      setYears(normalizeYears(yearsData));
       setSections(Array.isArray(sectionsData) ? sectionsData : []);
     } catch (error) {
       console.error('Error fetching meta data:', error);
       setDepts([]);
-      setYears([]);
+      setYears([1, 2, 3, 4]);
       setSections([]);
     } finally {
       setLoading(false);

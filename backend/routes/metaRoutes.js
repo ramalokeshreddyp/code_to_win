@@ -54,10 +54,8 @@ router.get("/depts", async (req, res) => {
 router.get("/years", async (req, res) => {
   logger.info("Fetching years");
   try {
-    const [years] = await db.query(
-      "SELECT DISTINCT year FROM faculty_section_assignment ORDER BY year"
-    );
-    res.json(years.map((y) => y.year));
+    // Keep year filters consistent across all modules.
+    res.json([1, 2, 3, 4]);
   } catch (err) {
     logger.error(`Error fetching years: ${err.message}`);
     res.status(500).json({ message: "Server error" });
